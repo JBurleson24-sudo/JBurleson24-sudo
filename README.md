@@ -62,6 +62,8 @@ A Java application focused on lodging and travel-agency management.
 - Application functionality
 - MySQL database integration
 
+- 🔗 **[View Project on GitHub](https://github.com/JBurleson24-sudo/Lodging-Travel-Agency/tree/main)**
+
 ---
 
 ### 🎮 Interactive Pokémon Application
