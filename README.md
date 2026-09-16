@@ -79,9 +79,10 @@ An interactive Pokémon-themed application developed using Unity.
 - Quiz functionality
 - Game logic
 - Multimedia integration
-## 🔗 Project Repository
+- ## 🔗 Project Repository
 
 [View Project on GitHub](https://github.com/JBurleson24-sudo/Interactive-Pokemon)
+
 ---
 
 ## 📚 Currently Learning
