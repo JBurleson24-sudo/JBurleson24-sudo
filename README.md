@@ -47,13 +47,12 @@ A desktop application designed to manage the operations of a video game store.
 
 🔗 **[View Project on GitHub](https://github.com/TSTC-CPT/26su-233x-BurlesonJared)**
 
----
 
 ### 🏨 Lodging & Travel Agency Application
 
 A Java application focused on lodging and travel-agency management.
 
-**Technologies:** Java, MySQL
+**Technologies:** Java, MySQL, JDBC
 
 **Highlights:**
 - Object-oriented programming
@@ -61,14 +60,14 @@ A Java application focused on lodging and travel-agency management.
 - Customer management
 - Application functionality
 - MySQL database integration
+- JDBC database connectivity
 
 🔗 **[View Project on GitHub](https://github.com/JBurleson24-sudo/Lodging-Travel-Agency)**
 
----
 
 ### 🎮 Interactive Pokémon Application
 
-An interactive Pokémon-themed application developed using Unity.
+An interactive Pokémon-themed application developed using Unity and C#.
 
 **Technologies:** C#, Unity
 
@@ -79,10 +78,9 @@ An interactive Pokémon-themed application developed using Unity.
 - Quiz functionality
 - Game logic
 - Multimedia integration
+- Video playback
 
 🔗 **[View Project on GitHub](https://github.com/JBurleson24-sudo/Interactive-Pokemon)**
-
----
 
 ## 📚 Currently Learning
 
