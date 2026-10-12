@@ -1,0 +1,332 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{59200B60-387B-4ECF-90F3-E8FC0F62EE25}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>BurlesonJLogonView</RootNamespace>
+    <AssemblyName>BurlesonJLogonView</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>
+    </StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="clsCart.cs" />
+    <Compile Include="clsCartItem.cs" />
+    <Compile Include="clsCurrentUser.cs" />
+    <Compile Include="clsDatabase.cs" />
+    <Compile Include="clsHTML.cs" />
+    <Compile Include="clsLogon.cs" />
+    <Compile Include="clsPasswordRules.cs" />
+    <Compile Include="clsSQL.cs" />
+    <Compile Include="clsUpdateControls.cs" />
+    <Compile Include="clsUser.cs" />
+    <Compile Include="clsValidation.cs" />
+    <Compile Include="frmAdjustQuantity.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAdjustQuantity.Designer.cs">
+      <DependentUpon>frmAdjustQuantity.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmCart.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCart.Designer.cs">
+      <DependentUpon>frmCart.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmCustomer.cs">
+      <SubType>Form</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="frmCustomer.Designer.cs">
+      <DependentUpon>frmCustomer.cs</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="frmCustomerEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCustomerEditor.Designer.cs">
+      <DependentUpon>frmCustomerEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmCustomerManagement.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCustomerManagement.Designer.cs">
+      <DependentUpon>frmCustomerManagement.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmDiscountEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmDiscountEditor.Designer.cs">
+      <DependentUpon>frmDiscountEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmDiscountManagement.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmDiscountManagement.Designer.cs">
+      <DependentUpon>frmDiscountManagement.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmForgotPassword.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmForgotPassword.Designer.cs">
+      <DependentUpon>frmForgotPassword.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmInventoryManagement.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmInventoryManagement.Designer.cs">
+      <DependentUpon>frmInventoryManagement.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmLogin.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmLogin.Designer.cs">
+      <DependentUpon>frmLogin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Create Account.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Create Account.Designer.cs">
+      <DependentUpon>Create Account.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmManagerEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmManagerEditor.Designer.cs">
+      <DependentUpon>frmManagerEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmManagerMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmManagerMain.Designer.cs">
+      <DependentUpon>frmManagerMain.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmManagerManagement.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmManagerManagement.Designer.cs">
+      <DependentUpon>frmManagerManagement.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmPOS.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPOS.Designer.cs">
+      <DependentUpon>frmPOS.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmPOSAvailablePromos.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPOSAvailablePromos.Designer.cs">
+      <DependentUpon>frmPOSAvailablePromos.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmPOSCheckout.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPOSCheckout.Designer.cs">
+      <DependentUpon>frmPOSCheckout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmPOSCustomerLookup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPOSCustomerLookup.Designer.cs">
+      <DependentUpon>frmPOSCustomerLookup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmPOSTransactionHistory.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPOSTransactionHistory.Designer.cs">
+      <DependentUpon>frmPOSTransactionHistory.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmProductEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmProductEditor.Designer.cs">
+      <DependentUpon>frmProductEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmReports.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmReports.Designer.cs">
+      <DependentUpon>frmReports.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Create Account.resx">
+      <DependentUpon>Create Account.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmAdjustQuantity.resx">
+      <DependentUpon>frmAdjustQuantity.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmCart.resx">
+      <DependentUpon>frmCart.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmCustomer.resx">
+      <DependentUpon>frmCustomer.cs</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmCustomerEditor.resx">
+      <DependentUpon>frmCustomerEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmCustomerManagement.resx">
+      <DependentUpon>frmCustomerManagement.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmDiscountEditor.resx">
+      <DependentUpon>frmDiscountEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmDiscountManagement.resx">
+      <DependentUpon>frmDiscountManagement.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmForgotPassword.resx">
+      <DependentUpon>frmForgotPassword.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmInventoryManagement.resx">
+      <DependentUpon>frmInventoryManagement.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmLogin.resx">
+      <DependentUpon>frmLogin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmManagerEditor.resx">
+      <DependentUpon>frmManagerEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmManagerMain.resx">
+      <DependentUpon>frmManagerMain.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmManagerManagement.resx">
+      <DependentUpon>frmManagerManagement.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmPOS.resx">
+      <DependentUpon>frmPOS.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmPOSAvailablePromos.resx">
+      <DependentUpon>frmPOSAvailablePromos.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmPOSCheckout.resx">
+      <DependentUpon>frmPOSCheckout.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmPOSCustomerLookup.resx">
+      <DependentUpon>frmPOSCustomerLookup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmPOSTransactionHistory.resx">
+      <DependentUpon>frmPOSTransactionHistory.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmProductEditor.resx">
+      <DependentUpon>frmProductEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmReports.resx">
+      <DependentUpon>frmReports.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="CartHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CreateAccountHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Customer.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="CustomerManagementHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DiscountManagementHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="EditCustomerHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ForgotPasswordHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="icon.ico" />
+    <Content Include="InventoryManagementHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="LoginHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ManagerEditorHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ManagerMainHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ManagerManagementHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="POSHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ReportsHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DiscountEditorHelp.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

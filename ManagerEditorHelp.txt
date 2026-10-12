@@ -1,0 +1,30 @@
+﻿MANAGER EDITOR HELP
+
+The Manager Editor screen is used to add a new manager or update an existing manager.
+
+PERSONAL INFORMATION
+Enter or update the manager's title, first name, last name, and suffix.
+
+LOGIN INFORMATION
+For a new manager, enter a username and password that meet the displayed requirements.
+
+When editing an existing manager, the password and security question fields are disabled. Editing general manager information does not change the manager's password or security recovery information.
+
+CONTACT INFORMATION
+Enter or update the manager's email address, primary phone number, and optional secondary phone number.
+
+ADDRESS
+Enter or update the manager's address, city, state, and ZIP code.
+
+SECURITY QUESTIONS
+When adding a new manager, select three different security questions and provide an answer for each question.
+
+SAVE MANAGER / SAVE CHANGES
+When adding a manager, click Save Manager to create the account.
+
+When editing a manager, click Save Changes to update the existing account.
+
+All required information must be valid before the account can be saved.
+
+HELP
+Click Help to display this help information.
