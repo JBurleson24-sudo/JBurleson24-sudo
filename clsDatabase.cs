@@ -1,10 +1,13 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using System.Data.SQLite;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace BurlesonJLogonView
 {
@@ -29,50 +32,651 @@ namespace BurlesonJLogonView
     internal static class clsDatabase
     {
         private static string connectionString =
-            @"Server=3.130.26.194;
-              Database=inew233xsu26;
-              User Id=BurlesonJ26Su233x;
-              Password=Whisp#0412;
-              TrustServerCertificate=True;";
+            @"Data Source=VideoGameStore.db;";
 
-        public static SqlConnection GetConnection()
+        public static SQLiteConnection GetConnection()
         {
-            return new SqlConnection(connectionString);
+            return new SQLiteConnection(connectionString);
         }
+        public static void InitializeDatabase()
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                string sql = @"
+                    PRAGMA foreign_keys = ON;
+
+                    CREATE TABLE IF NOT EXISTS Categories (
+                        CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        CategoryName TEXT NOT NULL,
+                        CategoryDescription TEXT
+                    );
+
+                    CREATE TABLE IF NOT EXISTS Position (
+                        PositionID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PositionTitle TEXT NOT NULL
+                    );
+
+                    CREATE TABLE IF NOT EXISTS SecurityQuestions (
+                        QuestionID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        SetID INTEGER NOT NULL,
+                        QuestionPrompt TEXT NOT NULL
+                    );
+
+                    CREATE TABLE IF NOT EXISTS Inventory (
+                        InventoryID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ItemName TEXT NOT NULL,
+                        ItemDescription TEXT NOT NULL,
+                        CategoryID INTEGER NOT NULL,
+                        RetailPrice NUMERIC NOT NULL,
+                        Cost NUMERIC NOT NULL,
+                        Quantity INTEGER NOT NULL,
+                        RestockThreshold INTEGER NOT NULL,
+                        Discontinued INTEGER,
+                        ItemImage BLOB,
+                        FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS Discounts (
+                        DiscountID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        DiscountCode TEXT NOT NULL,
+                        Description TEXT NOT NULL,
+                        DiscountLevel INTEGER NOT NULL,
+                        InventoryID INTEGER,
+                        DiscountType INTEGER NOT NULL,
+                        DiscountPercentage NUMERIC,
+                        DiscountDollarAmount NUMERIC,
+                        StartDate TEXT,
+                        ExpirationDate TEXT NOT NULL,
+                        FOREIGN KEY (InventoryID) REFERENCES Inventory(InventoryID)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS Person (
+                        PersonID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Title TEXT,
+                        NameFirst TEXT NOT NULL,
+                        NameMiddle TEXT,
+                        NameLast TEXT NOT NULL,
+                        Suffix TEXT,
+                        Address1 TEXT NOT NULL,
+                        Address2 TEXT,
+                        Address3 TEXT,
+                        City TEXT NOT NULL,
+                        Zipcode TEXT NOT NULL,
+                        State TEXT NOT NULL,
+                        Email TEXT,
+                        PhonePrimary TEXT,
+                        PhoneSecondary TEXT,
+                        Image BLOB,
+                        PositionID INTEGER NOT NULL,
+                        PersonDeleted INTEGER,
+                        FOREIGN KEY (PositionID) REFERENCES Position(PositionID)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS Logon (
+                        LogonID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PersonID INTEGER NOT NULL,
+                        LogonName TEXT NOT NULL UNIQUE,
+                        Password TEXT NOT NULL,
+                        FirstChallengeQuestion INTEGER NOT NULL,
+                        FirstChallengeAnswer TEXT NOT NULL,
+                        SecondChallengeQuestion INTEGER NOT NULL,
+                        SecondChallengeAnswer TEXT NOT NULL,
+                        ThirdChallengeQuestion INTEGER NOT NULL,
+                        ThirdChallengeAnswer TEXT NOT NULL,
+                        PositionTitle TEXT NOT NULL,
+                        AccountDisabled INTEGER,
+                        AccountDeleted INTEGER,
+                        FOREIGN KEY (PersonID) REFERENCES Person(PersonID),
+                        FOREIGN KEY (FirstChallengeQuestion)
+                            REFERENCES SecurityQuestions(QuestionID),
+                        FOREIGN KEY (SecondChallengeQuestion)
+                            REFERENCES SecurityQuestions(QuestionID),
+                        FOREIGN KEY (ThirdChallengeQuestion)
+                            REFERENCES SecurityQuestions(QuestionID)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS Orders (
+                        OrderID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        DiscountID INTEGER,
+                        PersonID INTEGER NOT NULL,
+                        EmployeeID INTEGER,
+                        OrderDate TEXT NOT NULL,
+                        CC_Number TEXT,
+                        ExpDate TEXT,
+                        CCV TEXT,
+                        FOREIGN KEY (DiscountID) REFERENCES Discounts(DiscountID),
+                        FOREIGN KEY (PersonID) REFERENCES Person(PersonID),
+                        FOREIGN KEY (EmployeeID) REFERENCES Person(PersonID)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS OrderDetails (
+                        OrderDetailsID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        OrderID INTEGER NOT NULL,
+                        InventoryID INTEGER NOT NULL,
+                        DiscountID INTEGER,
+                        Quantity INTEGER NOT NULL,
+                        FOREIGN KEY (OrderID) REFERENCES Orders(OrderID),
+                        FOREIGN KEY (InventoryID) REFERENCES Inventory(InventoryID),
+                        FOREIGN KEY (DiscountID) REFERENCES Discounts(DiscountID)
+                    );
+                    ";
+
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+        public static void SeedDatabase()
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                // Don't insert duplicates if data already exists.
+                using (SQLiteCommand check = new SQLiteCommand(
+                    "SELECT COUNT(*) FROM Categories;", conn))
+                {
+                    if (Convert.ToInt32(check.ExecuteScalar()) > 0)
+                        return;
+                }
+
+                                    string sql = @"
+                    INSERT INTO Categories
+                    (CategoryID, CategoryName, CategoryDescription)
+                    VALUES
+                    (100, 'Nintendo Switch', 'Games for the Nintendo Switch'),
+                    (101, 'Nintendo Switch 2', 'Games for the Nintendo Switch 2'),
+                    (102, 'Nintendo 3DS', 'Games for the Nintendo 3DS');
+
+                    INSERT INTO Position
+                    (PositionID, PositionTitle)
+                    VALUES
+                    (1000, 'Customer'),
+                    (1001, 'Employee'),
+                    (1002, 'Manager');
+
+                    INSERT INTO SecurityQuestions
+                    (QuestionID, SetID, QuestionPrompt)
+                    VALUES
+                    (105, 1, 'What is your favorite Color?'),
+                    (106, 1, 'Your favorite Toy''s name?'),
+                    (107, 1, 'Your Pet''s name?'),
+                    (108, 2, 'Your Home Town name?'),
+                    (109, 2, 'Your mother''s first name?'),
+                    (110, 2, 'Your favorite Football Team?'),
+                    (111, 3, 'What is your favorite food?'),
+                    (112, 3, 'Favorite place to vacation?'),
+                    (113, 3, 'Name of your favorite book?');
+";
+
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+//        public static void UpdateSecurityQuestions()
+//        {
+//            using (SQLiteConnection conn = GetConnection())
+//            {
+//                conn.Open();
+
+//                string sql = @"
+//UPDATE SecurityQuestions SET QuestionPrompt = 'What is your favorite Color?' WHERE QuestionID = 105;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'Your favorite Toy''s name?' WHERE QuestionID = 106;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'Your Pet''s name?' WHERE QuestionID = 107;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'Your Home Town name?' WHERE QuestionID = 108;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'Your mother''s first name?' WHERE QuestionID = 109;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'Your favorite Football Team?' WHERE QuestionID = 110;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'What is your favorite food?' WHERE QuestionID = 111;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'Favorite place to vacation?' WHERE QuestionID = 112;
+//UPDATE SecurityQuestions SET QuestionPrompt = 'Name of your favorite book?' WHERE QuestionID = 113;";
+
+//                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+//                {
+//                    cmd.ExecuteNonQuery();
+//                }
+//            }
+//        }
+        public static void ImportInventory()
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                using (SQLiteCommand check =
+     new SQLiteCommand("SELECT COUNT(*) FROM Inventory;", conn))
+                {
+                    if (Convert.ToInt32(check.ExecuteScalar()) > 0)
+                        return;
+                }
+
+                string filePath = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "Inventory.csv");
+
+                foreach (string line in File.ReadAllLines(filePath))
+                {
+                    string[] values = Regex.Split(
+                        line,
+                        ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                    if (values.Length < 9)
+                        continue;
+
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        values[i] = values[i].Trim();
+
+                        if (values[i].StartsWith("\"") &&
+                            values[i].EndsWith("\""))
+                        {
+                            values[i] = values[i].Substring(
+                                1, values[i].Length - 2);
+
+                            values[i] = values[i].Replace("\"\"", "\"");
+                        }
+                    }
+
+                    string sql = @"
+                            INSERT INTO Inventory
+                            (
+                                InventoryID,
+                                ItemName,
+                                ItemDescription,
+                                CategoryID,
+                                RetailPrice,
+                                Cost,
+                                Quantity,
+                                RestockThreshold,
+                                Discontinued,
+                                ItemImage
+                            )
+                            VALUES
+                            (
+                                @InventoryID,
+                                @ItemName,
+                                @ItemDescription,
+                                @CategoryID,
+                                @RetailPrice,
+                                @Cost,
+                                @Quantity,
+                                @RestockThreshold,
+                                @Discontinued,
+                                NULL
+                            );";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue(
+                            "@InventoryID", Convert.ToInt32(values[0]));
+
+                        cmd.Parameters.AddWithValue(
+                            "@ItemName", values[1]);
+
+                        cmd.Parameters.AddWithValue(
+                            "@ItemDescription", values[2]);
+
+                        cmd.Parameters.AddWithValue(
+                            "@CategoryID", Convert.ToInt32(values[3]));
+
+                        cmd.Parameters.AddWithValue(
+                            "@RetailPrice", Convert.ToDecimal(values[4]));
+
+                        cmd.Parameters.AddWithValue(
+                            "@Cost", Convert.ToDecimal(values[5]));
+
+                        cmd.Parameters.AddWithValue(
+                            "@Quantity", Convert.ToInt32(values[6]));
+
+                        cmd.Parameters.AddWithValue(
+                            "@RestockThreshold", Convert.ToInt32(values[7]));
+
+                        cmd.Parameters.AddWithValue(
+                            "@Discontinued", Convert.ToInt32(values[8]));
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+        public static void ImportRemainingData()
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                string discountsPath = Path.Combine(
+      AppDomain.CurrentDomain.BaseDirectory,
+      "Discount.csv");
+
+                foreach (string line in File.ReadAllLines(discountsPath))
+                {
+                    string[] v = Regex.Split(
+                        line,
+                        ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                    for (int i = 0; i < v.Length; i++)
+                    {
+                        v[i] = v[i].Trim().Trim('"');
+                    }
+
+                    string sql = @"
+                    INSERT OR IGNORE INTO Discounts
+                    (DiscountID, DiscountCode, Description, DiscountLevel,
+                     InventoryID, DiscountType, DiscountPercentage,
+                     DiscountDollarAmount, StartDate, ExpirationDate)
+                    VALUES
+                    (@ID, @Code, @Description, @Level,
+                     @InventoryID, @Type, @Percentage,
+                     @DollarAmount, @StartDate, @ExpirationDate);";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@ID", Convert.ToInt32(v[0]));
+                        cmd.Parameters.AddWithValue("@Code", v[1]);
+                        cmd.Parameters.AddWithValue("@Description", v[2]);
+                        cmd.Parameters.AddWithValue("@Level", Convert.ToInt32(v[3]));
+
+                        cmd.Parameters.AddWithValue("@InventoryID",
+                            v[4] == "NULL" ? (object)DBNull.Value : Convert.ToInt32(v[4]));
+
+                        cmd.Parameters.AddWithValue("@Type", Convert.ToInt32(v[5]));
+
+                        cmd.Parameters.AddWithValue("@Percentage",
+                            v[6] == "NULL" ? (object)DBNull.Value : Convert.ToDecimal(v[6]));
+
+                        cmd.Parameters.AddWithValue("@DollarAmount",
+                            v[7] == "NULL" ? (object)DBNull.Value : Convert.ToDecimal(v[7]));
+
+                        cmd.Parameters.AddWithValue("@StartDate",
+                            v[8] == "NULL" ? (object)DBNull.Value : v[8]);
+
+                        cmd.Parameters.AddWithValue("@ExpirationDate", v[9]);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                string personPath = Path.Combine(
+    AppDomain.CurrentDomain.BaseDirectory,
+    "Person.csv");
+
+                foreach (string line in File.ReadAllLines(personPath))
+                {
+                    string[] v = Regex.Split(
+                        line,
+                        ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                    for (int i = 0; i < v.Length; i++)
+                        v[i] = v[i].Trim().Trim('"');
+
+                    string sql = @"
+                    INSERT OR IGNORE INTO Person
+                    (PersonID, Title, NameFirst, NameMiddle, NameLast, Suffix,
+                     Address1, Address2, Address3, City, Zipcode, State, Email,
+                     PhonePrimary, PhoneSecondary, Image, PositionID, PersonDeleted)
+                    VALUES
+                    (@PersonID, @Title, @First, @Middle, @Last, @Suffix,
+                     @Address1, @Address2, @Address3, @City, @Zip, @State, @Email,
+                     @Phone1, @Phone2, NULL, @PositionID, @Deleted);";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@PersonID", Convert.ToInt32(v[0]));
+                        cmd.Parameters.AddWithValue("@Title", v[1]);
+                        cmd.Parameters.AddWithValue("@First", v[2]);
+                        cmd.Parameters.AddWithValue("@Middle",
+                            v[3] == "NULL" ? (object)DBNull.Value : v[3]);
+                        cmd.Parameters.AddWithValue("@Last", v[4]);
+                        cmd.Parameters.AddWithValue("@Suffix", v[5]);
+                        cmd.Parameters.AddWithValue("@Address1", v[6]);
+                        cmd.Parameters.AddWithValue("@Address2", v[7]);
+                        cmd.Parameters.AddWithValue("@Address3", v[8]);
+                        cmd.Parameters.AddWithValue("@City", v[9]);
+                        cmd.Parameters.AddWithValue("@Zip", v[10]);
+                        cmd.Parameters.AddWithValue("@State", v[11]);
+                        cmd.Parameters.AddWithValue("@Email", v[12]);
+                        cmd.Parameters.AddWithValue("@Phone1", v[13]);
+                        cmd.Parameters.AddWithValue("@Phone2", v[14]);
+                        cmd.Parameters.AddWithValue("@PositionID", Convert.ToInt32(v[16]));
+                        cmd.Parameters.AddWithValue("@Deleted",
+                            v[17] == "NULL" ? (object)DBNull.Value : Convert.ToInt32(v[17]));
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                string logonPath = Path.Combine(
+    AppDomain.CurrentDomain.BaseDirectory,
+    "Logon.csv");
+
+                foreach (string line in File.ReadAllLines(logonPath))
+                {
+                    string[] v = Regex.Split(
+                        line,
+                        ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                    for (int i = 0; i < v.Length; i++)
+                        v[i] = v[i].Trim().Trim('"');
+
+                    string sql = @"
+                INSERT OR IGNORE INTO Logon
+                (LogonID, PersonID, LogonName, Password,
+                 FirstChallengeQuestion, FirstChallengeAnswer,
+                 SecondChallengeQuestion, SecondChallengeAnswer,
+                 ThirdChallengeQuestion, ThirdChallengeAnswer,
+                 PositionTitle, AccountDisabled, AccountDeleted)
+                VALUES
+                (@LogonID, @PersonID, @LogonName, @Password,
+                 @Question1, @Answer1,
+                 @Question2, @Answer2,
+                 @Question3, @Answer3,
+                 @PositionTitle, @Disabled, @Deleted);";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@LogonID", Convert.ToInt32(v[0]));
+                        cmd.Parameters.AddWithValue("@PersonID", Convert.ToInt32(v[1]));
+                        cmd.Parameters.AddWithValue("@LogonName", v[2]);
+                        cmd.Parameters.AddWithValue("@Password", v[3]);
+
+                        cmd.Parameters.AddWithValue("@Question1", Convert.ToInt32(v[4]));
+                        cmd.Parameters.AddWithValue("@Answer1", v[5]);
+
+                        cmd.Parameters.AddWithValue("@Question2", Convert.ToInt32(v[6]));
+                        cmd.Parameters.AddWithValue("@Answer2", v[7]);
+
+                        cmd.Parameters.AddWithValue("@Question3", Convert.ToInt32(v[8]));
+                        cmd.Parameters.AddWithValue("@Answer3", v[9]);
+
+                        cmd.Parameters.AddWithValue("@PositionTitle", v[10]);
+                        cmd.Parameters.AddWithValue("@Disabled", Convert.ToInt32(v[11]));
+                        cmd.Parameters.AddWithValue("@Deleted", Convert.ToInt32(v[12]));
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                string ordersPath = Path.Combine(
+    AppDomain.CurrentDomain.BaseDirectory,
+    "OrderID.csv");
+
+                foreach (string line in File.ReadAllLines(ordersPath))
+                {
+                    string[] v = Regex.Split(
+                        line,
+                        ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                    for (int i = 0; i < v.Length; i++)
+                        v[i] = v[i].Trim().Trim('"');
+
+                    string sql = @"
+                    INSERT OR IGNORE INTO Orders
+                    (OrderID, DiscountID, PersonID, EmployeeID,
+                     OrderDate, CC_Number, ExpDate, CCV)
+                    VALUES
+                    (@OrderID, @DiscountID, @PersonID, @EmployeeID,
+                     @OrderDate, @CCNumber, @ExpDate, @CCV);";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@OrderID",
+                            Convert.ToInt32(v[0]));
+
+                        cmd.Parameters.AddWithValue("@DiscountID",
+                            v[1] == "NULL" ? (object)DBNull.Value : Convert.ToInt32(v[1]));
+
+                        cmd.Parameters.AddWithValue("@PersonID",
+                            Convert.ToInt32(v[2]));
+
+                        cmd.Parameters.AddWithValue("@EmployeeID",
+                            v[3] == "NULL" ? (object)DBNull.Value : Convert.ToInt32(v[3]));
+
+                        cmd.Parameters.AddWithValue("@OrderDate", v[4]);
+                        cmd.Parameters.AddWithValue("@CCNumber", v[5]);
+                        cmd.Parameters.AddWithValue("@ExpDate", v[6]);
+                        cmd.Parameters.AddWithValue("@CCV", v[7]);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                string detailsPath = Path.Combine(
+    AppDomain.CurrentDomain.BaseDirectory,
+    "Details.csv");
+
+                foreach (string line in File.ReadAllLines(detailsPath))
+                {
+                    string[] v = Regex.Split(
+                        line,
+                        ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                    for (int i = 0; i < v.Length; i++)
+                        v[i] = v[i].Trim().Trim('"');
+
+                    string sql = @"
+                    INSERT OR IGNORE INTO OrderDetails
+                    (OrderDetailsID, OrderID, InventoryID, DiscountID, Quantity)
+                    VALUES
+                    (@DetailsID, @OrderID, @InventoryID, @DiscountID, @Quantity);";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@DetailsID",
+                            Convert.ToInt32(v[0]));
+
+                        cmd.Parameters.AddWithValue("@OrderID",
+                            Convert.ToInt32(v[1]));
+
+                        cmd.Parameters.AddWithValue("@InventoryID",
+                            Convert.ToInt32(v[2]));
+
+                        cmd.Parameters.AddWithValue("@DiscountID",
+                            v[3] == "NULL"
+                                ? (object)DBNull.Value
+                                : Convert.ToInt32(v[3]));
+
+                        cmd.Parameters.AddWithValue("@Quantity",
+                            Convert.ToInt32(v[4]));
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+        public static void ImportInventoryImages()
+        {
+            string imageFolder = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "GameImages");
+
+            if (!Directory.Exists(imageFolder))
+                return;
+
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SQLiteCommand check = new SQLiteCommand(
+    "SELECT COUNT(*) FROM Inventory WHERE ItemImage IS NOT NULL;", conn))
+                {
+                    if (Convert.ToInt32(check.ExecuteScalar()) > 0)
+                        return;
+                }
+                foreach (string file in Directory.GetFiles(imageFolder))
+                {
+                    string extension = Path.GetExtension(file).ToLower();
+
+                    if (extension != ".png" && extension != ".jpg" &&
+                        extension != ".jpeg")
+                        continue;
+
+                    int inventoryID;
+
+                    if (!int.TryParse(
+                        Path.GetFileNameWithoutExtension(file),
+                        out inventoryID))
+                        continue;
+
+                    byte[] imageBytes = File.ReadAllBytes(file);
+
+                    string sql = @"
+                UPDATE Inventory
+                SET ItemImage = @Image
+                WHERE InventoryID = @InventoryID;";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                    {
+                        cmd.Parameters.Add("@Image", DbType.Binary).Value = imageBytes;
+                        cmd.Parameters.AddWithValue("@InventoryID", inventoryID);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+
+        // Microsoft.Data.SQLite does not include SqlDataAdapter, so this helper
+        // loads query results into the DataTable objects used by the existing forms.
+        private static void FillDataTable(SQLiteCommand command, DataTable table)
+        {
+            using (SQLiteDataReader reader = command.ExecuteReader())
+            {
+                table.Load(reader);
+            }
+        }
+
 
         public static string UserLogin(string username, string password)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
             SELECT PersonID, PositionTitle
-            FROM BurlesonJ26Su233x.Logon
+            FROM Logon
             WHERE LogonName = @User
             AND Password = @Pass
             AND (AccountDisabled = 0 OR AccountDisabled IS NULL)
             AND (AccountDeleted = 0 OR AccountDeleted IS NULL);";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
 
                 cmd.Parameters.AddWithValue("@User", username);
                 cmd.Parameters.AddWithValue("@Pass", password);
 
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
+                using (SQLiteDataReader reader = cmd.ExecuteReader())
                 {
-                    clsCurrentUser.PersonID =
-                        Convert.ToInt32(reader["PersonID"]);
+                    if (reader.Read())
+                    {
+                        clsCurrentUser.PersonID =
+                            Convert.ToInt32(reader["PersonID"]);
 
-                    clsCurrentUser.UserName =
-                        username;
+                        clsCurrentUser.UserName = username;
+                        clsCurrentUser.IsLoggedIn = true;
 
-                    clsCurrentUser.IsLoggedIn =
-                        true;
-
-                    return reader["PositionTitle"].ToString();
+                        return reader["PositionTitle"].ToString();
+                    }
                 }
 
                 return "";
@@ -82,20 +686,20 @@ namespace BurlesonJLogonView
         {
             List<string> questions = new List<string>();
 
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
             SELECT QuestionPrompt
-            FROM BurlesonJ26Su233x.SecurityQuestions
+            FROM SecurityQuestions
             WHERE SetID = @SetID
             ORDER BY QuestionID";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@SetID", setID);
 
-                SqlDataReader dr = cmd.ExecuteReader();
+                SQLiteDataReader dr = cmd.ExecuteReader();
 
                 while (dr.Read())
                 {
@@ -107,7 +711,7 @@ namespace BurlesonJLogonView
         }
         public static clsDiscount GetDiscount(string promoCode)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -120,17 +724,17 @@ namespace BurlesonJLogonView
                             DiscountType,
                             DiscountPercentage,
                             DiscountDollarAmount
-                        FROM BurlesonJ26Su233x.Discounts
+                        FROM Discounts
                         WHERE DiscountCode = @Code
-                        AND (StartDate IS NULL OR StartDate <= CAST(GETDATE() AS date))
-                        AND ExpirationDate >= CAST(GETDATE() AS date)";
+                        AND (StartDate IS NULL OR StartDate <= date('now'))
+                        AND ExpirationDate >= date('now')";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@Code", promoCode);
 
-                SqlDataReader reader = cmd.ExecuteReader();
+                using (SQLiteDataReader reader = cmd.ExecuteReader())
 
-                if (reader.Read())
+                    if (reader.Read())
                 {
                     clsDiscount discount = new clsDiscount();
 
@@ -151,21 +755,22 @@ namespace BurlesonJLogonView
                     return discount;
                 }
 
-                return null;
+                
             }
+            return null;
         }
         public static int GetQuestionID(string question)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
                     SELECT QuestionID
-                    FROM BurlesonJ26Su233x.SecurityQuestions
+                    FROM SecurityQuestions
                     WHERE QuestionPrompt = @Question";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@Question", question);
 
                 return Convert.ToInt32(cmd.ExecuteScalar());
@@ -194,11 +799,11 @@ namespace BurlesonJLogonView
             int q3,
             string a3)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
-                SqlTransaction transaction = conn.BeginTransaction();
+                SQLiteTransaction transaction = conn.BeginTransaction();
 
                 try
                 {
@@ -206,7 +811,7 @@ namespace BurlesonJLogonView
                     int personID;
 
                     string sqlPerson = @"
-                        INSERT INTO BurlesonJ26Su233x.Person
+                        INSERT INTO Person
                         (
                             Title,
                             NameFirst,
@@ -241,9 +846,9 @@ namespace BurlesonJLogonView
                             @PositionID
                         );
 
-                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                        SELECT last_insert_rowid();";
 
-                    SqlCommand cmdPerson = new SqlCommand(sqlPerson, conn, transaction);
+                    SQLiteCommand cmdPerson = new SQLiteCommand(sqlPerson, conn, transaction);
 
                     cmdPerson.Parameters.AddWithValue("@Title", title);
                     cmdPerson.Parameters.AddWithValue("@FirstName", firstName);
@@ -260,10 +865,10 @@ namespace BurlesonJLogonView
                     cmdPerson.Parameters.AddWithValue("@PhoneSecondary", phoneSecondary);
                     cmdPerson.Parameters.AddWithValue("@PositionID", positionID);
 
-                    personID = (int)cmdPerson.ExecuteScalar();
+                    personID = Convert.ToInt32(cmdPerson.ExecuteScalar());
 
                     string sqlLogon = @"
-                            INSERT INTO BurlesonJ26Su233x.Logon
+                            INSERT INTO Logon
                             (
                                 PersonID,
                                 LogonName,
@@ -294,7 +899,7 @@ namespace BurlesonJLogonView
                                 0
                             )";
 
-                    SqlCommand cmdLogon = new SqlCommand(sqlLogon, conn, transaction);
+                    SQLiteCommand cmdLogon = new SQLiteCommand(sqlLogon, conn, transaction);
 
                     cmdLogon.Parameters.AddWithValue("@PersonID", personID);
                     cmdLogon.Parameters.AddWithValue("@LogonName", username);
@@ -343,11 +948,11 @@ namespace BurlesonJLogonView
     int q3,
     string a3)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
-                SqlTransaction transaction = conn.BeginTransaction();
+                SQLiteTransaction transaction = conn.BeginTransaction();
 
                 try
                 {
@@ -355,7 +960,7 @@ namespace BurlesonJLogonView
                     int personID;
 
                     string sqlPerson = @"
-                INSERT INTO BurlesonJ26Su233x.Person
+                INSERT INTO Person
                 (
                     Title,
                     NameFirst,
@@ -390,10 +995,10 @@ namespace BurlesonJLogonView
                     @PositionID
                 );
 
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                SELECT last_insert_rowid();";
 
-                    SqlCommand cmdPerson =
-                        new SqlCommand(
+                    SQLiteCommand cmdPerson =
+                        new SQLiteCommand(
                             sqlPerson,
                             conn,
                             transaction);
@@ -441,10 +1046,10 @@ namespace BurlesonJLogonView
                         "@PositionID", positionID);
 
                     personID =
-                        (int)cmdPerson.ExecuteScalar();
+                        Convert.ToInt32(cmdPerson.ExecuteScalar());
 
                     string sqlLogon = @"
-                INSERT INTO BurlesonJ26Su233x.Logon
+                INSERT INTO Logon
                 (
                     PersonID,
                     LogonName,
@@ -475,8 +1080,8 @@ namespace BurlesonJLogonView
                     0
                 )";
 
-                    SqlCommand cmdLogon =
-                        new SqlCommand(
+                    SQLiteCommand cmdLogon =
+                        new SQLiteCommand(
                             sqlLogon,
                             conn,
                             transaction);
@@ -526,7 +1131,7 @@ namespace BurlesonJLogonView
         }
         public static DataRow GetManagerByID(int personID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -547,24 +1152,22 @@ namespace BurlesonJLogonView
                 p.PhonePrimary,
                 p.PhoneSecondary,
                 l.LogonName
-            FROM BurlesonJ26Su233x.Person p
-            INNER JOIN BurlesonJ26Su233x.Logon l
+            FROM Person p
+            INNER JOIN Logon l
                 ON p.PersonID = l.PersonID
             WHERE p.PersonID = @PersonID
             AND l.PositionTitle = 'Manager';";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@PersonID",
                         personID);
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     if (dt.Rows.Count == 0)
                     {
@@ -592,17 +1195,17 @@ namespace BurlesonJLogonView
     string phoneSecondary,
     string username)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
-                SqlTransaction transaction =
+                SQLiteTransaction transaction =
                     conn.BeginTransaction();
 
                 try
                 {
                     string personSql = @"
-                UPDATE BurlesonJ26Su233x.Person
+                UPDATE Person
                 SET
                     Title = @Title,
                     NameFirst = @NameFirst,
@@ -620,8 +1223,8 @@ namespace BurlesonJLogonView
                 WHERE PersonID = @PersonID
                 AND PositionID = 1002;";
 
-                    using (SqlCommand cmd =
-                        new SqlCommand(
+                    using (SQLiteCommand cmd =
+                        new SQLiteCommand(
                             personSql,
                             conn,
                             transaction))
@@ -672,13 +1275,13 @@ namespace BurlesonJLogonView
                     }
 
                     string logonSql = @"
-                UPDATE BurlesonJ26Su233x.Logon
+                UPDATE Logon
                 SET LogonName = @LogonName
                 WHERE PersonID = @PersonID
                 AND PositionTitle = 'Manager';";
 
-                    using (SqlCommand cmd =
-                        new SqlCommand(
+                    using (SQLiteCommand cmd =
+                        new SQLiteCommand(
                             logonSql,
                             conn,
                             transaction))
@@ -709,18 +1312,18 @@ namespace BurlesonJLogonView
     int personID,
     bool disabled)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            UPDATE BurlesonJ26Su233x.Logon
+            UPDATE Logon
             SET AccountDisabled = @AccountDisabled
             WHERE PersonID = @PersonID
             AND PositionTitle = 'Manager';";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@PersonID",
@@ -736,17 +1339,17 @@ namespace BurlesonJLogonView
         }
         public static int GetPersonIDByUsername(string username)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
             SELECT PersonID
-            FROM BurlesonJ26Su233x.Logon
+            FROM Logon
             WHERE LogonName = @Username;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@Username",
@@ -766,7 +1369,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetDiscounts()
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -788,18 +1391,16 @@ namespace BurlesonJLogonView
                 d.StartDate,
                 d.ExpirationDate,
                 d.InventoryID
-            FROM BurlesonJ26Su233x.Discounts d
+            FROM Discounts d
             ORDER BY d.DiscountCode;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -808,7 +1409,7 @@ namespace BurlesonJLogonView
         public static DataTable SearchDiscounts(
     string searchText)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -830,25 +1431,23 @@ namespace BurlesonJLogonView
                 d.StartDate,
                 d.ExpirationDate,
                 d.InventoryID
-            FROM BurlesonJ26Su233x.Discounts d
+            FROM Discounts d
             WHERE
                 d.DiscountCode LIKE @Search
                 OR d.Description LIKE @Search
             ORDER BY d.DiscountCode;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@Search",
                         "%" + searchText + "%");
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -865,12 +1464,12 @@ namespace BurlesonJLogonView
     DateTime startDate,
     DateTime expirationDate)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            INSERT INTO BurlesonJ26Su233x.Discounts
+            INSERT INTO Discounts
             (
                 DiscountCode,
                 Description,
@@ -895,8 +1494,8 @@ namespace BurlesonJLogonView
                 @ExpirationDate
             );";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@DiscountCode",
@@ -956,12 +1555,12 @@ namespace BurlesonJLogonView
     DateTime startDate,
     DateTime expirationDate)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            UPDATE BurlesonJ26Su233x.Discounts
+            UPDATE Discounts
             SET
                 DiscountCode = @DiscountCode,
                 Description = @Description,
@@ -974,8 +1573,8 @@ namespace BurlesonJLogonView
                 ExpirationDate = @ExpirationDate
             WHERE DiscountID = @DiscountID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@DiscountID",
@@ -1023,16 +1622,16 @@ namespace BurlesonJLogonView
         }
         public static bool DeleteDiscount(int discountID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            DELETE FROM BurlesonJ26Su233x.Discounts
+            DELETE FROM Discounts
             WHERE DiscountID = @DiscountID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@DiscountID",
@@ -1044,7 +1643,7 @@ namespace BurlesonJLogonView
         }
         public static DataRow GetDiscountByID(int discountID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1060,22 +1659,20 @@ namespace BurlesonJLogonView
                 DiscountDollarAmount,
                 StartDate,
                 ExpirationDate
-            FROM BurlesonJ26Su233x.Discounts
+            FROM Discounts
             WHERE DiscountID = @DiscountID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@DiscountID",
                         discountID);
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     if (dt.Rows.Count == 0)
                     {
@@ -1088,16 +1685,16 @@ namespace BurlesonJLogonView
         }
         public static string GetQuestionText(int questionID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql =
                 @"SELECT QuestionPrompt
-          FROM BurlesonJ26Su233x.SecurityQuestions
+          FROM SecurityQuestions
           WHERE QuestionID = @QuestionID";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@QuestionID", questionID);
 
                 object result = cmd.ExecuteScalar();
@@ -1110,7 +1707,7 @@ namespace BurlesonJLogonView
         }
         public static int[] GetChallengeQuestions(string username)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1118,30 +1715,33 @@ namespace BurlesonJLogonView
                 @"SELECT FirstChallengeQuestion,
                  SecondChallengeQuestion,
                  ThirdChallengeQuestion
-          FROM BurlesonJ26Su233x.Logon
+          FROM Logon
           WHERE LogonName = @User";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@User", username);
 
-                SqlDataReader dr = cmd.ExecuteReader();
-
-                if (dr.Read())
+                using (SQLiteDataReader dr = cmd.ExecuteReader())
                 {
-                    return new int[]
+                    if (dr.Read())
                     {
-                Convert.ToInt32(dr["FirstChallengeQuestion"]),
-                Convert.ToInt32(dr["SecondChallengeQuestion"]),
-                Convert.ToInt32(dr["ThirdChallengeQuestion"])
-                    };
+                        return new int[]
+                        {
+            Convert.ToInt32(dr["FirstChallengeQuestion"]),
+            Convert.ToInt32(dr["SecondChallengeQuestion"]),
+            Convert.ToInt32(dr["ThirdChallengeQuestion"])
+                        };
+                    }
                 }
+
+                
 
                 return null;
             }
         }
         public static bool ResetPassword( string username,string answer1,string answer2,string answer3,string newPassword)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1149,33 +1749,34 @@ namespace BurlesonJLogonView
                 @"SELECT FirstChallengeAnswer,
                  SecondChallengeAnswer,
                  ThirdChallengeAnswer
-          FROM BurlesonJ26Su233x.Logon
+          FROM Logon
           WHERE LogonName = @User";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@User", username);
 
-                SqlDataReader dr = cmd.ExecuteReader();
+                
 
-                if (!dr.Read())
-                    return false;
+                using (SQLiteDataReader dr = cmd.ExecuteReader())
+                {
+                    if (!dr.Read())
+                        return false;
 
-                bool answersCorrect =
-                    answer1.Equals(dr["FirstChallengeAnswer"].ToString(), StringComparison.OrdinalIgnoreCase) &&
-                    answer2.Equals(dr["SecondChallengeAnswer"].ToString(), StringComparison.OrdinalIgnoreCase) &&
-                    answer3.Equals(dr["ThirdChallengeAnswer"].ToString(), StringComparison.OrdinalIgnoreCase);
+                    bool answersCorrect =
+                        answer1.Equals(dr["FirstChallengeAnswer"].ToString(), StringComparison.OrdinalIgnoreCase) &&
+                        answer2.Equals(dr["SecondChallengeAnswer"].ToString(), StringComparison.OrdinalIgnoreCase) &&
+                        answer3.Equals(dr["ThirdChallengeAnswer"].ToString(), StringComparison.OrdinalIgnoreCase);
 
-                dr.Close();
-
-                if (!answersCorrect)
-                    return false;
+                    if (!answersCorrect)
+                        return false;
+                }
 
                 string updateSql =
-                @"UPDATE BurlesonJ26Su233x.Logon
+                @"UPDATE Logon
           SET Password = @Password
           WHERE LogonName = @User";
 
-                SqlCommand updateCmd = new SqlCommand(updateSql, conn);
+                SQLiteCommand updateCmd = new SQLiteCommand(updateSql, conn);
 
                 updateCmd.Parameters.AddWithValue("@Password", newPassword);
                 updateCmd.Parameters.AddWithValue("@User", username);
@@ -1187,7 +1788,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetInventory()
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1200,22 +1801,23 @@ namespace BurlesonJLogonView
             Quantity,
             ItemImage,
             CategoryID
-            FROM BurlesonJ26Su233x.Inventory
+            FROM Inventory
             WHERE Discontinued = 0
             ORDER BY ItemName;";
-
-                SqlDataAdapter da = new SqlDataAdapter(sql, conn);
+                // SQLite uses FillDataTable instead of SqlDataAdapter.
 
                 DataTable dt = new DataTable();
-
-                da.Fill(dt);
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                {
+                    FillDataTable(cmd, dt);
+                }
 
                 return dt;
             }
         }
         public static DataTable GetManagerInventory()
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1228,15 +1830,14 @@ namespace BurlesonJLogonView
                 Quantity,
                 RestockThreshold,
                 Discontinued
-            FROM BurlesonJ26Su233x.Inventory
+            FROM Inventory
             ORDER BY ItemName;";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     DataTable dt = new DataTable();
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(dt);
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -1244,7 +1845,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable SearchManagerInventory(string search,int categoryID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1257,14 +1858,14 @@ namespace BurlesonJLogonView
                 Quantity,
                 RestockThreshold,
                 Discontinued
-            FROM BurlesonJ26Su233x.Inventory
+            FROM Inventory
             WHERE
                 (@CategoryID = 0 OR CategoryID = @CategoryID)
             AND
                 ItemName LIKE @Search
             ORDER BY ItemName;";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@CategoryID",
@@ -1275,9 +1876,8 @@ namespace BurlesonJLogonView
                         "%" + search + "%");
 
                     DataTable dt = new DataTable();
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(dt);
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -1285,7 +1885,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable SearchInventory(string search, int categoryID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1298,7 +1898,7 @@ namespace BurlesonJLogonView
                 Quantity,
                 ItemImage,
                 CategoryID
-            FROM BurlesonJ26Su233x.Inventory
+            FROM Inventory
             WHERE
                 Discontinued = 0
             AND
@@ -1307,15 +1907,14 @@ namespace BurlesonJLogonView
                 ItemName LIKE @Search
             ORDER BY ItemName;";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@CategoryID", categoryID);
                     cmd.Parameters.AddWithValue("@Search", "%" + search + "%");
 
                     DataTable dt = new DataTable();
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(dt);
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -1323,17 +1922,17 @@ namespace BurlesonJLogonView
         }
         public static bool AdjustInventoryQuantity(int inventoryID, int adjustment)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            UPDATE BurlesonJ26Su233x.Inventory
+            UPDATE Inventory
             SET Quantity = Quantity + @Adjustment
             WHERE InventoryID = @InventoryID
             AND Quantity + @Adjustment >= 0;";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@Adjustment",
@@ -1349,21 +1948,20 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetCategories()
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
             SELECT CategoryID, CategoryName
-            FROM BurlesonJ26Su233x.Categories
+            FROM Categories
             ORDER BY CategoryName;";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     DataTable dt = new DataTable();
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(dt);
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -1371,12 +1969,12 @@ namespace BurlesonJLogonView
         }
         public static bool AddInventoryItem(string itemName, string itemDescription,int categoryID,decimal retailPrice,decimal cost,int quantity,int restockThreshold,byte[] itemImage)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            INSERT INTO BurlesonJ26Su233x.Inventory
+            INSERT INTO Inventory
             (
                 ItemName,
                 ItemDescription,
@@ -1401,8 +1999,8 @@ namespace BurlesonJLogonView
                 @ItemImage
             );";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@ItemName", itemName);
@@ -1425,7 +2023,7 @@ namespace BurlesonJLogonView
                     cmd.Parameters.AddWithValue(
                         "@RestockThreshold", restockThreshold);
 
-                    SqlParameter imageParameter =cmd.Parameters.Add("@ItemImage",SqlDbType.VarBinary);
+                    SQLiteParameter imageParameter = cmd.Parameters.Add("@ItemImage", DbType.Binary);
 
                     if (itemImage == null)
                     {
@@ -1442,7 +2040,7 @@ namespace BurlesonJLogonView
         }
         public static DataRow GetInventoryItemByID(int inventoryID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1458,21 +2056,19 @@ namespace BurlesonJLogonView
                 RestockThreshold,
                 Discontinued,
                 ItemImage
-            FROM BurlesonJ26Su233x.Inventory
+            FROM Inventory
             WHERE InventoryID = @InventoryID;";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@InventoryID",
                         inventoryID);
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     if (dt.Rows.Count == 0)
                     {
@@ -1485,7 +2081,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetInventoryByCategory(int categoryID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1502,7 +2098,7 @@ namespace BurlesonJLogonView
                     Quantity,
                     ItemImage,
                     CategoryID
-                FROM BurlesonJ26Su233x.Inventory
+                FROM Inventory
                 WHERE Discontinued = 0
                 ORDER BY ItemName";
                 }
@@ -1517,21 +2113,20 @@ namespace BurlesonJLogonView
                     Quantity,
                     ItemImage,
                     CategoryID
-                FROM BurlesonJ26Su233x.Inventory
+                FROM Inventory
                 WHERE Discontinued = 0
                 AND CategoryID = @CategoryID
                 ORDER BY ItemName";
                 }
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     if (categoryID != 0)
                         cmd.Parameters.AddWithValue("@CategoryID", categoryID);
 
                     DataTable dt = new DataTable();
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(dt);
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -1548,12 +2143,12 @@ namespace BurlesonJLogonView
     int restockThreshold,
     byte[] itemImage)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            UPDATE BurlesonJ26Su233x.Inventory
+            UPDATE Inventory
             SET
                 ItemName = @ItemName,
                 ItemDescription = @ItemDescription,
@@ -1565,8 +2160,8 @@ namespace BurlesonJLogonView
                 ItemImage = @ItemImage
             WHERE InventoryID = @InventoryID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@InventoryID", inventoryID);
@@ -1593,10 +2188,10 @@ namespace BurlesonJLogonView
                         "@RestockThreshold",
                         restockThreshold);
 
-                    SqlParameter imageParameter =
+                    SQLiteParameter imageParameter =
                         cmd.Parameters.Add(
                             "@ItemImage",
-                            SqlDbType.VarBinary);
+                            DbType.Binary);
 
                     if (itemImage == null)
                     {
@@ -1617,17 +2212,17 @@ namespace BurlesonJLogonView
     int inventoryID,
     bool discontinued)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            UPDATE BurlesonJ26Su233x.Inventory
+            UPDATE Inventory
             SET Discontinued = @Discontinued
             WHERE InventoryID = @InventoryID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@Discontinued",
@@ -1648,16 +2243,16 @@ namespace BurlesonJLogonView
                     string expDate,
                     string ccv)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
-                SqlTransaction trans = conn.BeginTransaction();
+                SQLiteTransaction trans = conn.BeginTransaction();
 
                 try
                 {
                     string orderSql = @"
-                            INSERT INTO BurlesonJ26Su233x.Orders
+                            INSERT INTO Orders
                             (
                                 DiscountID,
                                 PersonID,
@@ -1672,28 +2267,28 @@ namespace BurlesonJLogonView
                                 NULL,
                                 @PersonID,
                                 NULL,
-                                GETDATE(),
+                                CURRENT_TIMESTAMP,
                                 @CC,
                                 @Exp,
                                 @CCV
                             );
 
-                            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                            SELECT last_insert_rowid();";
 
-                    SqlCommand orderCmd =
-                        new SqlCommand(orderSql, conn, trans);
+                    SQLiteCommand orderCmd =
+                        new SQLiteCommand(orderSql, conn, trans);
 
                     orderCmd.Parameters.AddWithValue("@PersonID", personID);
                     orderCmd.Parameters.AddWithValue("@CC", ccNumber);
                     orderCmd.Parameters.AddWithValue("@Exp", expDate);
                     orderCmd.Parameters.AddWithValue("@CCV", ccv);
 
-                    int orderID = (int)orderCmd.ExecuteScalar();
+                    int orderID = Convert.ToInt32(orderCmd.ExecuteScalar());
 
                     foreach (clsCartItem item in cart.Items)
                     {
                         string detailSql = @"
-                            INSERT INTO BurlesonJ26Su233x.OrderDetails
+                            INSERT INTO OrderDetails
                             (
                                 OrderID,
                                 InventoryID,
@@ -1708,8 +2303,8 @@ namespace BurlesonJLogonView
                                 @Quantity
                             );";
 
-                        SqlCommand detailCmd =
-                            new SqlCommand(detailSql, conn, trans);
+                        SQLiteCommand detailCmd =
+                            new SQLiteCommand(detailSql, conn, trans);
 
                         detailCmd.Parameters.AddWithValue("@OrderID", orderID);
                         detailCmd.Parameters.AddWithValue("@InventoryID", item.InventoryID);
@@ -1718,12 +2313,12 @@ namespace BurlesonJLogonView
                         detailCmd.ExecuteNonQuery();
 
                         string inventorySql = @"
-                            UPDATE BurlesonJ26Su233x.Inventory
+                            UPDATE Inventory
                             SET Quantity = Quantity - @Quantity
                             WHERE InventoryID = @InventoryID";
 
-                        SqlCommand inventoryCmd =
-                            new SqlCommand(inventorySql, conn, trans);
+                        SQLiteCommand inventoryCmd =
+                            new SQLiteCommand(inventorySql, conn, trans);
 
                         inventoryCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
                         inventoryCmd.Parameters.AddWithValue("@InventoryID", item.InventoryID);
@@ -1744,7 +2339,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetCustomers()
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1758,21 +2353,19 @@ namespace BurlesonJLogonView
                 l.LogonName,
                 l.AccountDisabled,
                 l.AccountDeleted
-            FROM BurlesonJ26Su233x.Person p
-            INNER JOIN BurlesonJ26Su233x.Logon l
+            FROM Person p
+            INNER JOIN Logon l
                 ON p.PersonID = l.PersonID
             WHERE l.PositionTitle = 'Customer'
             ORDER BY p.NameLast, p.NameFirst;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -1780,7 +2373,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable SearchCustomers(string searchText)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1794,8 +2387,8 @@ namespace BurlesonJLogonView
                 l.LogonName,
                 l.AccountDisabled,
                 l.AccountDeleted
-            FROM BurlesonJ26Su233x.Person p
-            INNER JOIN BurlesonJ26Su233x.Logon l
+            FROM Person p
+            INNER JOIN Logon l
                 ON p.PersonID = l.PersonID
             WHERE l.PositionTitle = 'Customer'
             AND
@@ -1809,19 +2402,17 @@ namespace BurlesonJLogonView
             )
             ORDER BY p.NameLast, p.NameFirst;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@Search",
                         "%" + searchText + "%");
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -1829,7 +2420,7 @@ namespace BurlesonJLogonView
         }
         public static DataRow GetCustomerByID(int personID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -1850,24 +2441,22 @@ namespace BurlesonJLogonView
                 p.PhonePrimary,
                 p.PhoneSecondary,
                 l.LogonName
-            FROM BurlesonJ26Su233x.Person p
-            INNER JOIN BurlesonJ26Su233x.Logon l
+            FROM Person p
+            INNER JOIN Logon l
                 ON p.PersonID = l.PersonID
             WHERE p.PersonID = @PersonID
             AND l.PositionTitle = 'Customer';";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@PersonID",
                         personID);
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     if (dt.Rows.Count == 0)
                     {
@@ -1895,17 +2484,17 @@ namespace BurlesonJLogonView
     string phoneSecondary,
     string username)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
-                SqlTransaction transaction =
+                SQLiteTransaction transaction =
                     conn.BeginTransaction();
 
                 try
                 {
                     string personSql = @"
-                UPDATE BurlesonJ26Su233x.Person
+                UPDATE Person
                 SET
                     Title = @Title,
                     NameFirst = @NameFirst,
@@ -1922,8 +2511,8 @@ namespace BurlesonJLogonView
                     PhoneSecondary = @PhoneSecondary
                 WHERE PersonID = @PersonID;";
 
-                    using (SqlCommand cmd =
-                        new SqlCommand(
+                    using (SQLiteCommand cmd =
+                        new SQLiteCommand(
                             personSql,
                             conn,
                             transaction))
@@ -1995,12 +2584,12 @@ namespace BurlesonJLogonView
                     }
 
                     string logonSql = @"
-                UPDATE BurlesonJ26Su233x.Logon
+                UPDATE Logon
                 SET LogonName = @LogonName
                 WHERE PersonID = @PersonID;";
 
-                    using (SqlCommand cmd =
-                        new SqlCommand(
+                    using (SQLiteCommand cmd =
+                        new SQLiteCommand(
                             logonSql,
                             conn,
                             transaction))
@@ -2027,7 +2616,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetManagers()
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2041,21 +2630,19 @@ namespace BurlesonJLogonView
                 l.LogonName,
                 l.AccountDisabled,
                 l.AccountDeleted
-            FROM BurlesonJ26Su233x.Person p
-            INNER JOIN BurlesonJ26Su233x.Logon l
+            FROM Person p
+            INNER JOIN Logon l
                 ON p.PersonID = l.PersonID
             WHERE l.PositionTitle = 'Manager'
             ORDER BY p.NameLast, p.NameFirst;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -2063,7 +2650,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable SearchManagers(string searchText)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2077,8 +2664,8 @@ namespace BurlesonJLogonView
                 l.LogonName,
                 l.AccountDisabled,
                 l.AccountDeleted
-            FROM BurlesonJ26Su233x.Person p
-            INNER JOIN BurlesonJ26Su233x.Logon l
+            FROM Person p
+            INNER JOIN Logon l
                 ON p.PersonID = l.PersonID
             WHERE l.PositionTitle = 'Manager'
             AND
@@ -2091,19 +2678,17 @@ namespace BurlesonJLogonView
             )
             ORDER BY p.NameLast, p.NameFirst;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@Search",
                         "%" + searchText + "%");
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -2113,17 +2698,17 @@ namespace BurlesonJLogonView
     int personID,
     bool disabled)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
-            UPDATE BurlesonJ26Su233x.Logon
+            UPDATE Logon
             SET AccountDisabled = @AccountDisabled
             WHERE PersonID = @PersonID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@PersonID", personID);
@@ -2142,11 +2727,18 @@ namespace BurlesonJLogonView
                  string expiration,
                  string ccv)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
-                SqlTransaction transaction = conn.BeginTransaction();
+
+    //            using (SQLiteCommand pragma = new SQLiteCommand(
+    //"PRAGMA busy_timeout = 5000;", conn))
+    //            {
+    //                pragma.ExecuteNonQuery();
+    //            }
+
+                SQLiteTransaction transaction = conn.BeginTransaction();
 
                 try
                 {
@@ -2159,7 +2751,7 @@ namespace BurlesonJLogonView
                     }
 
                     string sqlOrder = @"
-            INSERT INTO BurlesonJ26Su233x.Orders
+            INSERT INTO Orders
             (
                 DiscountID,
                 PersonID,
@@ -2178,10 +2770,10 @@ namespace BurlesonJLogonView
                 @CCV
             );
 
-            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+            SELECT last_insert_rowid();";
 
-                    SqlCommand cmdOrder =
-                        new SqlCommand(sqlOrder, conn, transaction);
+                    SQLiteCommand cmdOrder =
+                        new SQLiteCommand(sqlOrder, conn, transaction);
 
                     cmdOrder.Parameters.AddWithValue(
                         "@DiscountID",
@@ -2207,7 +2799,7 @@ namespace BurlesonJLogonView
                         "@CCV",
                         ccv);
 
-                    int orderID = (int)cmdOrder.ExecuteScalar();
+                    int orderID = Convert.ToInt32(cmdOrder.ExecuteScalar());
 
                     foreach (clsCartItem item in cart.Items)
                     {
@@ -2223,7 +2815,7 @@ namespace BurlesonJLogonView
                         }
 
                         string sqlDetail = @"
-                INSERT INTO BurlesonJ26Su233x.OrderDetails
+                INSERT INTO OrderDetails
                 (
                     OrderID,
                     InventoryID,
@@ -2238,8 +2830,8 @@ namespace BurlesonJLogonView
                     @Quantity
                 );";
 
-                        SqlCommand cmdDetail =
-                            new SqlCommand(
+                        SQLiteCommand cmdDetail =
+                            new SQLiteCommand(
                                 sqlDetail,
                                 conn,
                                 transaction);
@@ -2263,13 +2855,13 @@ namespace BurlesonJLogonView
                         cmdDetail.ExecuteNonQuery();
 
                         string sqlInventory = @"
-                UPDATE BurlesonJ26Su233x.Inventory
+                UPDATE Inventory
                 SET Quantity = Quantity - @Quantity
                 WHERE InventoryID = @InventoryID
                 AND Quantity >= @Quantity;";
 
-                        SqlCommand cmdInventory =
-                            new SqlCommand(
+                        SQLiteCommand cmdInventory =
+                            new SQLiteCommand(
                                 sqlInventory,
                                 conn,
                                 transaction);
@@ -2295,9 +2887,13 @@ namespace BurlesonJLogonView
                     transaction.Commit();
                     return orderID;
                 }
-                catch
+                catch (Exception ex)
                 {
                     transaction.Rollback();
+
+                    MessageBox.Show(
+                        "Order database error:\n\n" + ex.Message);
+
                     return -1;
                 }
             }
@@ -2306,7 +2902,7 @@ namespace BurlesonJLogonView
     DateTime startDate,
     DateTime endDate)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2321,17 +2917,17 @@ namespace BurlesonJLogonView
                 od.Quantity,
                 i.ItemName,
                 i.RetailPrice
-            FROM BurlesonJ26Su233x.Orders o
-            INNER JOIN BurlesonJ26Su233x.OrderDetails od
+            FROM Orders o
+            INNER JOIN OrderDetails od
                 ON o.OrderID = od.OrderID
-            INNER JOIN BurlesonJ26Su233x.Inventory i
+            INNER JOIN Inventory i
                 ON od.InventoryID = i.InventoryID
             WHERE o.OrderDate >= @StartDate
             AND o.OrderDate <= @EndDate
             ORDER BY o.OrderID, od.OrderDetailsID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@StartDate",
@@ -2342,11 +2938,9 @@ namespace BurlesonJLogonView
                         endDate.Date);
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -2355,7 +2949,7 @@ namespace BurlesonJLogonView
         public static DataRow GetDiscountByIDForReport(
     int discountID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2367,22 +2961,20 @@ namespace BurlesonJLogonView
                 DiscountType,
                 DiscountPercentage,
                 DiscountDollarAmount
-            FROM BurlesonJ26Su233x.Discounts
+            FROM Discounts
             WHERE DiscountID = @DiscountID;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@DiscountID",
                         discountID);
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     if (dt.Rows.Count == 0)
                         return null;
@@ -2393,7 +2985,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetInventoryReport(int reportType)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2409,7 +3001,7 @@ namespace BurlesonJLogonView
                     WHEN Discontinued = 1 THEN 'No'
                     ELSE 'Yes'
                 END AS Available
-            FROM BurlesonJ26Su233x.Inventory
+            FROM Inventory
             WHERE
                 (@ReportType = 2)
 
@@ -2426,19 +3018,17 @@ namespace BurlesonJLogonView
 
             ORDER BY ItemName;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@ReportType",
                         reportType);
 
                     DataTable dt = new DataTable();
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
 
-                    SqlDataAdapter da =
-                        new SqlDataAdapter(cmd);
-
-                    da.Fill(dt);
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -2446,7 +3036,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable SearchPOSCustomers(string searchText)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2457,10 +3047,10 @@ namespace BurlesonJLogonView
                 p.NameLast,
                 p.Email,
                 p.PhonePrimary
-            FROM BurlesonJ26Su233x.Person p
-            INNER JOIN BurlesonJ26Su233x.Logon l
+            FROM Person p
+            INNER JOIN Logon l
                 ON p.PersonID = l.PersonID
-            LEFT JOIN BurlesonJ26Su233x.Orders o
+            LEFT JOIN Orders o
                 ON p.PersonID = o.PersonID
             WHERE
                 p.PositionID = 1000
@@ -2481,8 +3071,8 @@ namespace BurlesonJLogonView
                 p.NameLast,
                 p.NameFirst;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@Search",
@@ -2490,11 +3080,7 @@ namespace BurlesonJLogonView
 
                     DataTable dt = new DataTable();
 
-                    using (SqlDataAdapter da =
-                        new SqlDataAdapter(cmd))
-                    {
-                        da.Fill(dt);
-                    }
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -2503,7 +3089,7 @@ namespace BurlesonJLogonView
         public static DataTable GetCustomerTransactions(
     int personID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2521,16 +3107,16 @@ namespace BurlesonJLogonView
                         THEN o.DiscountID
                     ELSE NULL
                 END AS DiscountID
-            FROM BurlesonJ26Su233x.Orders o
-            INNER JOIN BurlesonJ26Su233x.OrderDetails od
+            FROM Orders o
+            INNER JOIN OrderDetails od
                 ON o.OrderID = od.OrderID
-            INNER JOIN BurlesonJ26Su233x.Inventory i
+            INNER JOIN Inventory i
                 ON od.InventoryID = i.InventoryID
             WHERE o.PersonID = @PersonID
             ORDER BY o.OrderDate DESC, o.OrderID DESC;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue(
                         "@PersonID",
@@ -2538,11 +3124,7 @@ namespace BurlesonJLogonView
 
                     DataTable dt = new DataTable();
 
-                    using (SqlDataAdapter da =
-                        new SqlDataAdapter(cmd))
-                    {
-                        da.Fill(dt);
-                    }
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -2550,7 +3132,7 @@ namespace BurlesonJLogonView
         }
         public static DataTable GetAvailableDiscounts()
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2576,9 +3158,9 @@ namespace BurlesonJLogonView
                  CAST(
                 CAST(DiscountPercentage * 100 AS DECIMAL(10,0))
                 AS VARCHAR(20)
-                    ) + '%'
+                    ) || '%'
                 ELSE
-                    '$' + CAST(
+                    '$' || CAST(
                         CAST(DiscountDollarAmount AS DECIMAL(10,2))
                         AS VARCHAR(20)
                     )
@@ -2586,28 +3168,24 @@ namespace BurlesonJLogonView
 
                 ExpirationDate
 
-            FROM BurlesonJ26Su233x.Discounts
+            FROM Discounts
 
             WHERE
                 (StartDate IS NULL
-                    OR StartDate <= CAST(GETDATE() AS DATE))
+                    OR StartDate <= date('now'))
 
                 AND ExpirationDate >=
-                    CAST(GETDATE() AS DATE)
+                    date('now')
 
             ORDER BY DiscountCode;";
 
-                using (SqlCommand cmd =
-                    new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd =
+                    new SQLiteCommand(sql, conn))
                 {
                     DataTable dt =
                         new DataTable();
 
-                    using (SqlDataAdapter da =
-                        new SqlDataAdapter(cmd))
-                    {
-                        da.Fill(dt);
-                    }
+                    FillDataTable(cmd, dt);
 
                     return dt;
                 }
@@ -2621,11 +3199,11 @@ namespace BurlesonJLogonView
     string expiration,
     string ccv)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
-                SqlTransaction transaction =
+                SQLiteTransaction transaction =
                     conn.BeginTransaction();
 
                 try
@@ -2641,7 +3219,7 @@ namespace BurlesonJLogonView
                     }
 
                     string sqlOrder = @"
-                INSERT INTO BurlesonJ26Su233x.Orders
+                INSERT INTO Orders
                 (
                     DiscountID,
                     PersonID,
@@ -2662,10 +3240,10 @@ namespace BurlesonJLogonView
                     @CCV
                 );
 
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                SELECT last_insert_rowid();";
 
-                    SqlCommand cmdOrder =
-                        new SqlCommand(
+                    SQLiteCommand cmdOrder =
+                        new SQLiteCommand(
                             sqlOrder,
                             conn,
                             transaction);
@@ -2699,7 +3277,7 @@ namespace BurlesonJLogonView
                         ccv);
 
                     int orderID =
-                        (int)cmdOrder.ExecuteScalar();
+                        Convert.ToInt32(cmdOrder.ExecuteScalar());
 
                     foreach (clsCartItem item in cart.Items)
                     {
@@ -2717,7 +3295,7 @@ namespace BurlesonJLogonView
                         }
 
                         string sqlDetail = @"
-                    INSERT INTO BurlesonJ26Su233x.OrderDetails
+                    INSERT INTO OrderDetails
                     (
                         OrderID,
                         InventoryID,
@@ -2732,8 +3310,8 @@ namespace BurlesonJLogonView
                         @Quantity
                     );";
 
-                        SqlCommand cmdDetail =
-                            new SqlCommand(
+                        SQLiteCommand cmdDetail =
+                            new SQLiteCommand(
                                 sqlDetail,
                                 conn,
                                 transaction);
@@ -2757,13 +3335,13 @@ namespace BurlesonJLogonView
                         cmdDetail.ExecuteNonQuery();
 
                         string sqlInventory = @"
-                    UPDATE BurlesonJ26Su233x.Inventory
+                    UPDATE Inventory
                     SET Quantity = Quantity - @Quantity
                     WHERE InventoryID = @InventoryID
                     AND Quantity >= @Quantity;";
 
-                        SqlCommand cmdInventory =
-                            new SqlCommand(
+                        SQLiteCommand cmdInventory =
+                            new SQLiteCommand(
                                 sqlInventory,
                                 conn,
                                 transaction);
@@ -2799,7 +3377,7 @@ namespace BurlesonJLogonView
         }
         public static DataRow GetCustomerInfo(int personID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
@@ -2808,17 +3386,16 @@ namespace BurlesonJLogonView
                         NameFirst,
                         NameLast,
                         PhonePrimary
-                    FROM BurlesonJ26Su233x.Person
+                    FROM Person
                     WHERE PersonID = @PersonID";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@PersonID", personID);
 
                     DataTable dt = new DataTable();
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(dt);
+                    // SQLite uses FillDataTable instead of SqlDataAdapter.
+                    FillDataTable(cmd, dt);
 
                     if (dt.Rows.Count > 0)
                         return dt.Rows[0];
@@ -2829,17 +3406,17 @@ namespace BurlesonJLogonView
         }
         public static int CustomerLogin(string username, string password)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
                     SELECT PersonID
-                    FROM BurlesonJ26Su233x.Logon
+                    FROM Logon
                     WHERE LogonName = @User
                     AND Password = @Pass";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
 
                 cmd.Parameters.AddWithValue("@User", username);
                 cmd.Parameters.AddWithValue("@Pass", password);
@@ -2854,16 +3431,16 @@ namespace BurlesonJLogonView
         }
         public static int GetInventoryQuantity(int inventoryID)
         {
-            using (SqlConnection conn = GetConnection())
+            using (SQLiteConnection conn = GetConnection())
             {
                 conn.Open();
 
                 string sql = @"
             SELECT Quantity
-            FROM BurlesonJ26Su233x.Inventory
+            FROM Inventory
             WHERE InventoryID = @InventoryID";
 
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                SQLiteCommand cmd = new SQLiteCommand(sql, conn);
 
                 cmd.Parameters.AddWithValue("@InventoryID", inventoryID);
 
