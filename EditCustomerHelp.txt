@@ -1,0 +1,71 @@
+﻿EDIT CUSTOMER HELP
+
+The Edit Customer screen allows a manager to update information
+for an existing customer account.
+
+PERSONAL INFORMATION
+--------------------
+Title:
+Select the customer's title.
+
+First Name:
+Enter the customer's first name.
+
+Last Name:
+Enter the customer's last name.
+
+Suffix:
+Enter a suffix if applicable.
+
+CONTACT INFORMATION
+-------------------
+Email:
+Enter the customer's email address.
+
+Phone:
+Enter the customer's primary phone number.
+
+2nd Phone:
+Enter an optional secondary phone number.
+
+ADDRESS
+-------
+Address 1:
+Enter the customer's primary street address.
+
+Address 2:
+Enter additional address information if needed.
+
+Address 3:
+Enter additional address information if needed.
+
+City:
+Enter the customer's city.
+
+State:
+Select the customer's state.
+
+Zip:
+Enter the customer's ZIP code.
+
+ACCOUNT INFORMATION
+-------------------
+Username:
+Displays the customer's current username. Update it if needed.
+
+SAVING CHANGES
+--------------
+Click Save to save the changes made to the customer.
+
+If any entered information is invalid, correct the information
+before trying to save again.
+
+CANCEL
+------
+Click Cancel to close the Edit Customer screen without saving
+changes.
+
+HELP
+----
+This help file provides instructions for using the Edit Customer
+screen.

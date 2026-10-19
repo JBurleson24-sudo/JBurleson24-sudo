@@ -1,0 +1,101 @@
+﻿MANAGER POINT OF SALE HELP
+
+CUSTOMER
+
+Lookup Customer:
+Use this button to search for a customer before completing a sale.
+
+Customers can be searched by information such as:
+- Name
+- Email
+- Phone
+- Member / Person ID
+- Order / Invoice number
+
+After selecting a customer, the customer's name will appear on the POS screen.
+
+Transaction History:
+Displays past purchases for the currently selected customer.
+
+
+PRODUCTS
+
+Search:
+Enter part of a product name and click Search.
+
+Category:
+Select a category to limit the product results.
+
+Clear:
+Clears the current product search and returns to all categories.
+
+Product Details:
+Selecting a product displays its name, description, price, image, and current stock.
+
+Quantity:
+Select the number of units to add to the cart.
+
+Add to Cart:
+Adds the selected quantity of the product to the current sale.
+
+
+CART
+
+The cart displays:
+- Product name
+- Price
+- Quantity
+- Line total
+
+Remove Item:
+Select an item in the cart and click Remove Item to remove it.
+
+Subtotal:
+Total price before discounts and tax.
+
+Discount:
+Amount removed by the currently applied promotion.
+
+Tax:
+Sales tax calculated after discounts.
+
+Total:
+Final amount charged to the customer.
+
+
+PROMOTIONS
+
+Available Promos:
+Displays currently active and unexpired promotional codes.
+
+Apply:
+Enter a promotion code and click Apply.
+
+Promotions may apply to:
+- The entire order
+- A specific product
+
+Promotions may be:
+- Percentage discounts
+- Dollar amount discounts
+
+
+CHECKOUT
+
+A customer must be selected before checkout.
+
+The cart must contain at least one item.
+
+Click Checkout to enter payment information and complete the sale.
+
+After a successful sale:
+- The transaction is stored under the selected customer.
+- The logged-in manager is recorded as the employee who completed the sale.
+- Inventory quantities are reduced.
+- An HTML sales receipt opens in the default web browser.
+- The receipt includes the customer's information and the manager's name.
+
+
+CLOSE
+
+Click Close to exit the Point of Sale screen.

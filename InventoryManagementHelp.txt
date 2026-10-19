@@ -1,0 +1,69 @@
+﻿INVENTORY MANAGEMENT HELP
+
+The Inventory Management screen allows managers to view and maintain
+all products stored in inventory.
+
+SEARCHING INVENTORY
+- Enter part or all of a product name in the Search box.
+- Select a category to limit results to that category.
+- Click Search to display matching products.
+- Click Clear to remove all search filters and display all inventory.
+
+INVENTORY GRID
+The inventory grid displays:
+- Product ID
+- Product Name
+- Cost
+- Retail Price
+- Quantity on Hand
+- Restock Threshold
+- Discontinued Status
+
+ADD PRODUCT
+1. Click Add Product.
+2. Enter the product name and description.
+3. Select a category.
+4. Enter the product cost and retail price.
+5. Enter the starting quantity.
+6. Enter the restock threshold.
+7. Optionally choose a product image.
+8. Click Save.
+
+EDIT PRODUCT
+1. Select a product in the inventory grid.
+2. Click Edit Product.
+3. Update the desired product information.
+4. Click Save.
+
+ADJUST QUANTITY
+1. Select a product in the inventory grid.
+2. Click Adjust Quantity.
+3. Enter a positive number to add inventory.
+4. Enter a negative number to remove inventory.
+5. Click Save.
+
+Inventory quantity cannot be reduced below zero.
+
+RESTOCK NOTIFICATION
+The "Products needing restock" message displays the number of active
+products whose quantity is at or below the product's Restock Threshold.
+
+DISCONTINUE PRODUCT
+1. Select a product in the inventory grid.
+2. Click Discontinue.
+3. Confirm the action.
+
+A discontinued product is not deleted from the database. It remains
+available to managers for inventory history and reporting but is no
+longer available for customer purchase.
+
+RESTORE PRODUCT
+A discontinued product can be restored:
+1. Select the discontinued product.
+2. Click Discontinue again.
+3. Confirm that the product should be restored.
+
+The product will become available for sale again.
+
+CLOSE
+Click Close to return to the Manager Dashboard.
