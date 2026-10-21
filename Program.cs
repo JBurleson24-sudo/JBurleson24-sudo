@@ -14,8 +14,16 @@ namespace BurlesonJLogonView
         [STAThread]
         static void Main()
         {
+            
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            clsDatabase.InitializeDatabase();
+            clsDatabase.SeedDatabase();
+           
+            clsDatabase.ImportInventory();
+            clsDatabase.ImportInventoryImages();
+           
             Application.Run(new frmCustomer());
         }
     }
