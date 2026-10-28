@@ -167,6 +167,62 @@ namespace BurlesonJLogonView
                 {
                     cmd.ExecuteNonQuery();
                 }
+                bool hasUnitPrice = false;
+
+                using (SQLiteCommand check = new SQLiteCommand(
+                    "PRAGMA table_info(OrderDetails);", conn))
+                using (SQLiteDataReader reader = check.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        if (reader["name"].ToString() == "UnitPrice")
+                        {
+                            hasUnitPrice = true;
+                            break;
+                        }
+                    }
+                }
+                string[] orderColumns =
+{
+    "DiscountAmount",
+    "TaxAmount"
+};
+
+                foreach (string column in orderColumns)
+                {
+                    bool exists = false;
+
+                    using (SQLiteCommand check = new SQLiteCommand(
+                        "PRAGMA table_info(Orders);", conn))
+                    using (SQLiteDataReader reader = check.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            if (reader["name"].ToString() == column)
+                            {
+                                exists = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!exists)
+                    {
+                        using (SQLiteCommand addColumn = new SQLiteCommand(
+                            "ALTER TABLE Orders ADD COLUMN " + column + " NUMERIC;", conn))
+                        {
+                            addColumn.ExecuteNonQuery();
+                        }
+                    }
+                }
+                if (!hasUnitPrice)
+                {
+                    using (SQLiteCommand addColumn = new SQLiteCommand(
+                        "ALTER TABLE OrderDetails ADD COLUMN UnitPrice NUMERIC;", conn))
+                    {
+                        addColumn.ExecuteNonQuery();
+                    }
+                }
             }
         }
         public static void SeedDatabase()
@@ -2293,14 +2349,16 @@ namespace BurlesonJLogonView
                                 OrderID,
                                 InventoryID,
                                 DiscountID,
-                                Quantity
+                                Quantity,
+                                UnitPrice
                             )
                             VALUES
                             (
                                 @OrderID,
                                 @InventoryID,
                                 NULL,
-                                @Quantity
+                                @Quantity,
+                                @UnitPrice
                             );";
 
                         SQLiteCommand detailCmd =
@@ -2309,7 +2367,7 @@ namespace BurlesonJLogonView
                         detailCmd.Parameters.AddWithValue("@OrderID", orderID);
                         detailCmd.Parameters.AddWithValue("@InventoryID", item.InventoryID);
                         detailCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-
+                        detailCmd.Parameters.AddWithValue("@UnitPrice", item.Price);
                         detailCmd.ExecuteNonQuery();
 
                         string inventorySql = @"
@@ -2753,12 +2811,14 @@ namespace BurlesonJLogonView
                     string sqlOrder = @"
             INSERT INTO Orders
             (
-                DiscountID,
+                   DiscountID,
                 PersonID,
                 OrderDate,
                 CC_Number,
                 ExpDate,
-                CCV
+                CCV,
+                DiscountAmount,
+                TaxAmount
             )
             VALUES
             (
@@ -2767,7 +2827,9 @@ namespace BurlesonJLogonView
                 @OrderDate,
                 @CardNumber,
                 @Expiration,
-                @CCV
+                @CCV,
+                @DiscountAmount,
+                @TaxAmount
             );
 
             SELECT last_insert_rowid();";
@@ -2798,7 +2860,8 @@ namespace BurlesonJLogonView
                     cmdOrder.Parameters.AddWithValue(
                         "@CCV",
                         ccv);
-
+                    cmdOrder.Parameters.AddWithValue("@DiscountAmount", cart.DiscountAmount);
+                    cmdOrder.Parameters.AddWithValue("@TaxAmount", cart.Tax);
                     int orderID = Convert.ToInt32(cmdOrder.ExecuteScalar());
 
                     foreach (clsCartItem item in cart.Items)
@@ -2820,14 +2883,16 @@ namespace BurlesonJLogonView
                     OrderID,
                     InventoryID,
                     DiscountID,
-                    Quantity
+                    Quantity,
+                    UnitPrice
                 )
                 VALUES
                 (
                     @OrderID,
                     @InventoryID,
                     @DiscountID,
-                    @Quantity
+                    @Quantity,
+                    @UnitPrice
                 );";
 
                         SQLiteCommand cmdDetail =
@@ -2852,7 +2917,10 @@ namespace BurlesonJLogonView
                             "@Quantity",
                             item.Quantity);
 
+                        cmdDetail.Parameters.AddWithValue("@UnitPrice", item.Price);
+
                         cmdDetail.ExecuteNonQuery();
+                        cmdDetail.Parameters.AddWithValue("@UnitPrice", item.Price);
 
                         string sqlInventory = @"
                 UPDATE Inventory
@@ -3300,14 +3368,16 @@ namespace BurlesonJLogonView
                         OrderID,
                         InventoryID,
                         DiscountID,
-                        Quantity
+                        Quantity,
+                        UnitPrice
                     )
                     VALUES
                     (
                         @OrderID,
                         @InventoryID,
                         @DiscountID,
-                        @Quantity
+                        @Quantity,
+                        @UnitPrice
                     );";
 
                         SQLiteCommand cmdDetail =
@@ -3331,6 +3401,8 @@ namespace BurlesonJLogonView
                         cmdDetail.Parameters.AddWithValue(
                             "@Quantity",
                             item.Quantity);
+
+                        cmdDetail.Parameters.AddWithValue("@UnitPrice", item.Price);
 
                         cmdDetail.ExecuteNonQuery();
 
