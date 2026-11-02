@@ -229,5 +229,74 @@ namespace BurlesonJLogonView
 
             btnFindOrder_Click(sender, e);
         }
+
+        private void btnReturnHistory_Click(object sender, EventArgs e)
+        {
+            int orderID;
+
+            if (!int.TryParse(txtOrderID.Text.Trim(), out orderID) ||
+                orderID <= 0)
+            {
+                MessageBox.Show("Please enter a valid order number.");
+                txtOrderID.Focus();
+                return;
+            }
+
+            try
+            {
+                DataTable history = clsDatabase.GetReturnHistory(orderID);
+
+                if (history.Rows.Count == 0)
+                {
+                    MessageBox.Show("No returns were found for that order.");
+                    return;
+                }
+
+                using (Form historyForm = new Form())
+                {
+                    historyForm.Text = "Return History — Order " + orderID;
+                    historyForm.Size = new Size(1100, 450);
+                    historyForm.StartPosition = FormStartPosition.CenterParent;
+                    historyForm.MinimizeBox = false;
+
+                    DataGridView grid = new DataGridView
+                    {
+                        Dock = DockStyle.Fill,
+                        ReadOnly = true,
+                        AllowUserToAddRows = false,
+                        AllowUserToDeleteRows = false,
+                        AutoGenerateColumns = true,
+                        AutoSizeColumnsMode =
+                            DataGridViewAutoSizeColumnsMode.AllCells,
+                        SelectionMode =
+                            DataGridViewSelectionMode.FullRowSelect,
+                        MultiSelect = false
+                    };
+
+                    grid.DataBindingComplete += (s, args) =>
+                    {
+                        foreach (string column in new[]
+                        {
+                    "Refund Subtotal", "Refund Tax", "Total Refund"
+                })
+                        {
+                            if (grid.Columns.Contains(column))
+                            {
+                                grid.Columns[column].DefaultCellStyle.Format = "C2";
+                            }
+                        }
+                    };
+
+                    historyForm.Controls.Add(grid);
+                    grid.DataSource = history;
+
+                    historyForm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Unable to load return history:\n" + ex.Message);
+            }
+        }
     }
 }

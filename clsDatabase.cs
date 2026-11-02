@@ -595,6 +595,48 @@ namespace BurlesonJLogonView
                 }
             }
         }
+        public static DataTable GetReturnHistory(int orderID)
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                string sql = @"
+            SELECT
+                r.ReturnID AS [Return Number],
+                r.ReturnDate AS [Date UTC],
+                i.ItemName AS Game,
+                r.Quantity,
+                r.RefundSubtotal AS [Refund Subtotal],
+                r.RefundTax AS [Refund Tax],
+                r.RefundSubtotal + r.RefundTax AS [Total Refund],
+                CASE WHEN r.Restock = 1 THEN 'Yes' ELSE 'No'
+                    END AS Restocked,
+                r.Reason,
+                p.NameFirst || ' ' || p.NameLast AS Employee
+            FROM Returns r
+            INNER JOIN OrderDetails od
+                ON od.OrderDetailsID = r.OrderDetailsID
+            INNER JOIN Inventory i
+                ON i.InventoryID = od.InventoryID
+            LEFT JOIN Person p
+                ON p.PersonID = r.ProcessedBy
+            WHERE od.OrderID = @OrderID
+            ORDER BY r.ReturnID DESC;";
+
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@OrderID", orderID);
+
+                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    {
+                        DataTable table = new DataTable();
+                        table.Load(reader);
+                        return table;
+                    }
+                }
+            }
+        }
         public static void SeedDatabase()
         {
             using (SQLiteConnection conn = GetConnection())

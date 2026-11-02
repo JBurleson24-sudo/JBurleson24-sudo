@@ -40,6 +40,7 @@
             this.chkRestock = new System.Windows.Forms.CheckBox();
             this.btnProcessReturn = new System.Windows.Forms.Button();
             this.lblRefundTotal = new System.Windows.Forms.Label();
+            this.btnReturnHistory = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dgvReturnItems)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudReturnQuantity)).BeginInit();
             this.SuspendLayout();
@@ -149,7 +150,7 @@
             // 
             this.btnProcessReturn.Enabled = false;
             this.btnProcessReturn.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnProcessReturn.Location = new System.Drawing.Point(540, 540);
+            this.btnProcessReturn.Location = new System.Drawing.Point(290, 540);
             this.btnProcessReturn.Name = "btnProcessReturn";
             this.btnProcessReturn.Size = new System.Drawing.Size(200, 45);
             this.btnProcessReturn.TabIndex = 9;
@@ -167,11 +168,23 @@
             this.lblRefundTotal.TabIndex = 10;
             this.lblRefundTotal.Text = "Refund Total: —";
             // 
+            // btnReturnHistory
+            // 
+            this.btnReturnHistory.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnReturnHistory.Location = new System.Drawing.Point(588, 540);
+            this.btnReturnHistory.Name = "btnReturnHistory";
+            this.btnReturnHistory.Size = new System.Drawing.Size(200, 45);
+            this.btnReturnHistory.TabIndex = 11;
+            this.btnReturnHistory.Text = "Return History";
+            this.btnReturnHistory.UseVisualStyleBackColor = true;
+            this.btnReturnHistory.Click += new System.EventHandler(this.btnReturnHistory_Click);
+            // 
             // frmReturns
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 614);
+            this.Controls.Add(this.btnReturnHistory);
             this.Controls.Add(this.lblRefundTotal);
             this.Controls.Add(this.btnProcessReturn);
             this.Controls.Add(this.chkRestock);
@@ -206,5 +219,6 @@
         private System.Windows.Forms.CheckBox chkRestock;
         private System.Windows.Forms.Button btnProcessReturn;
         private System.Windows.Forms.Label lblRefundTotal;
+        private System.Windows.Forms.Button btnReturnHistory;
     }
 }
