@@ -36,7 +36,20 @@ namespace BurlesonJLogonView
 
         public static SQLiteConnection GetConnection()
         {
-            return new SQLiteConnection(connectionString);
+            string folder = System.IO.Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "Burleson Tech",
+                "Video Game Store Management");
+
+            System.IO.Directory.CreateDirectory(folder);
+
+            var builder = new SQLiteConnectionStringBuilder
+            {
+                DataSource = System.IO.Path.Combine(folder, "VideoGameStore.db")
+            };
+
+            return new SQLiteConnection(builder.ConnectionString);
         }
         public static void InitializeDatabase()
         {
