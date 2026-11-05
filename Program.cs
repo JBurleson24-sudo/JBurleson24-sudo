@@ -1,16 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace BurlesonJLogonView
 {
     internal static class Program
     {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
@@ -39,7 +33,8 @@ namespace BurlesonJLogonView
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    step + " failed:\n\n" + ex.GetType().Name + ": " + ex.Message,
+                    step + " failed:\n\n" +
+                    ex.GetType().Name + ": " + ex.Message,
                     "Video Game Store startup error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
