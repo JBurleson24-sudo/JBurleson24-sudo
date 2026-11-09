@@ -1,0 +1,58 @@
+﻿DISCOUNT / PROMO CODE MANAGEMENT HELP
+
+This screen allows managers to create and maintain
+discounts and promotional codes.
+
+VIEWING DISCOUNTS
+The table displays all currently configured discounts.
+
+SEARCH
+Enter a discount code or description in the Search box
+and click Search.
+
+CLEAR
+Click Clear to remove the current search and display
+all discounts again.
+
+ADD DISCOUNT
+Click Add Discount to create a new discount or promo code.
+
+A discount can apply to:
+- The entire customer order
+- An individual inventory item
+
+Discount types include:
+- Percentage
+- Dollar Amount
+
+For an Individual Item discount, select the product that
+the discount applies to.
+
+All discounts require a start date and expiration date.
+
+EDIT DISCOUNT
+Select a discount from the table and click Edit Discount.
+Modify the desired information and click Save Changes.
+
+DELETE DISCOUNT
+Select a discount and click Delete Discount.
+You will be asked to confirm before the discount is deleted.
+
+PERCENTAGE DISCOUNTS
+Enter the percentage as a normal percentage value.
+Example:
+10.00 = 10% discount
+
+DOLLAR AMOUNT DISCOUNTS
+Enter the dollar amount to subtract.
+Example:
+5.00 = $5.00 discount
+
+DATE INFORMATION
+The Start Date determines when the discount becomes valid.
+The Expiration Date determines when the discount expires.
+
+The expiration date cannot occur before the start date.
+
+CLOSE
+Click Close to return to the previous screen.

@@ -1,0 +1,40 @@
+﻿=====================================
+        VIDEO GAME STORE HELP
+            Shopping Cart
+=====================================
+
+Updating Quantity
+-----------------
+1. Select an item in the cart.
+2. Change the quantity.
+3. Click "Update Quantity".
+
+Removing Items
+--------------
+1. Select an item.
+2. Click "Remove Item".
+
+Promotion Codes
+---------------
+Enter a valid promotion code and click "Apply Promo".
+
+Available codes may include:
+- SAVE10
+- SAVE20
+- GAME25
+
+Checkout
+--------
+Before checking out, enter:
+
+- Credit Card Number
+- Expiration Date
+- CCV
+
+A customer must be logged in before an order can be completed.
+
+Receipts
+--------
+After a successful purchase, an HTML receipt is automatically generated.
+
+Thank you for shopping with the Video Game Store!

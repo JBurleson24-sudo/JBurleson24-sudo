@@ -1,0 +1,41 @@
+﻿MANAGER REPORTS HELP
+
+SALES REPORTS
+
+Select Date:
+Select the date that will be used to generate a sales report.
+
+Daily Sales:
+Generates a sales report for the selected date.
+
+Weekly Sales:
+Generates a sales report beginning with the selected date and covering seven days.
+
+Monthly Sales:
+Generates a sales report for the entire month containing the selected date.
+
+
+INVENTORY REPORTS
+
+Available Inventory:
+Displays inventory items that are currently available for sale.
+
+Items Needing Restock:
+Displays inventory items whose quantity on hand is at or below their restock threshold.
+
+All Inventory:
+Displays all inventory items.
+
+
+REPORT INFORMATION
+
+Sales reports display order information including items sold, quantity, price, discounts, tax, and order totals.
+
+Inventory reports display inventory ID, item name, cost, retail price, quantity on hand, restock threshold, and availability.
+
+Reports open in your default web browser.
+
+
+CLOSE
+
+Click Close to return to the previous screen.
