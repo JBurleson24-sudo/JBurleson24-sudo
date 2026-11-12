@@ -36,7 +36,20 @@ namespace BurlesonJLogonView
 
         public static SQLiteConnection GetConnection()
         {
-            return new SQLiteConnection(connectionString);
+            string folder = System.IO.Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "Burleson Tech",
+                "Video Game Store Management");
+
+            System.IO.Directory.CreateDirectory(folder);
+
+            var builder = new SQLiteConnectionStringBuilder
+            {
+                DataSource = System.IO.Path.Combine(folder, "VideoGameStore.db")
+            };
+
+            return new SQLiteConnection(builder.ConnectionString);
         }
         public static void InitializeDatabase()
         {
@@ -161,11 +174,479 @@ namespace BurlesonJLogonView
                         FOREIGN KEY (InventoryID) REFERENCES Inventory(InventoryID),
                         FOREIGN KEY (DiscountID) REFERENCES Discounts(DiscountID)
                     );
-                    ";
+                    "
+;
 
                 using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
                 {
                     cmd.ExecuteNonQuery();
+                }
+                bool hasUnitPrice = false;
+
+                using (SQLiteCommand check = new SQLiteCommand(
+                    "PRAGMA table_info(OrderDetails);", conn))
+                using (SQLiteDataReader reader = check.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        if (reader["name"].ToString() == "UnitPrice")
+                        {
+                            hasUnitPrice = true;
+                            break;
+                        }
+                    }
+                }
+                string[] orderColumns =
+{
+    "DiscountAmount",
+    "TaxAmount"
+};
+
+                foreach (string column in orderColumns)
+                {
+                    bool exists = false;
+
+                    using (SQLiteCommand check = new SQLiteCommand(
+                        "PRAGMA table_info(Orders);", conn))
+                    using (SQLiteDataReader reader = check.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            if (reader["name"].ToString() == column)
+                            {
+                                exists = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!exists)
+                    {
+                        using (SQLiteCommand addColumn = new SQLiteCommand(
+                            "ALTER TABLE Orders ADD COLUMN " + column + " NUMERIC;", conn))
+                        {
+                            addColumn.ExecuteNonQuery();
+                        }
+                    }
+                }
+                if (!hasUnitPrice)
+                {
+                    using (SQLiteCommand addColumn = new SQLiteCommand(
+                        "ALTER TABLE OrderDetails ADD COLUMN UnitPrice NUMERIC;", conn))
+                    {
+                        addColumn.ExecuteNonQuery();
+                    }
+                }
+                string returnsSql = @"
+    CREATE TABLE IF NOT EXISTS Returns (
+        ReturnID INTEGER PRIMARY KEY AUTOINCREMENT,
+        OrderDetailsID INTEGER NOT NULL,
+        Quantity INTEGER NOT NULL CHECK (Quantity > 0),
+        RefundSubtotal NUMERIC NOT NULL CHECK (RefundSubtotal >= 0),
+        RefundTax NUMERIC NOT NULL CHECK (RefundTax >= 0),
+        Restock INTEGER NOT NULL CHECK (Restock IN (0, 1)),
+        Reason TEXT NOT NULL,
+        ReturnDate TEXT NOT NULL,
+        ProcessedBy INTEGER NOT NULL,
+        FOREIGN KEY (OrderDetailsID)
+            REFERENCES OrderDetails(OrderDetailsID),
+        FOREIGN KEY (ProcessedBy)
+            REFERENCES Person(PersonID)
+    );";
+
+                using (SQLiteCommand cmd = new SQLiteCommand(returnsSql, conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+        public static DataTable GetOrderItemsForReturn(int orderID)
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                string sql = @"
+            SELECT
+                od.OrderDetailsID,
+                od.InventoryID,
+                i.ItemName,
+                od.UnitPrice,
+                od.DiscountID AS ItemDiscountID,
+                o.DiscountAmount AS OrderDiscountAmount,
+                o.TaxAmount AS OrderTaxAmount,
+                od.Quantity AS PurchasedQuantity,
+                COALESCE(r.ReturnedQuantity, 0) AS ReturnedQuantity,
+                od.Quantity - COALESCE(r.ReturnedQuantity, 0)
+                    AS RemainingQuantity
+            FROM OrderDetails od
+            INNER JOIN Orders o
+                ON o.OrderID = od.OrderID
+            INNER JOIN Inventory i
+                ON i.InventoryID = od.InventoryID
+            LEFT JOIN (
+                SELECT
+                    OrderDetailsID,
+                    SUM(Quantity) AS ReturnedQuantity
+                FROM Returns
+                GROUP BY OrderDetailsID
+            ) r ON r.OrderDetailsID = od.OrderDetailsID
+            WHERE od.OrderID = @OrderID
+            ORDER BY od.OrderDetailsID;";
+
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@OrderID", orderID);
+
+                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    {
+                        DataTable table = new DataTable();
+                        table.Load(reader);
+                        return table;
+                    }
+                }
+            }
+        }
+        private static decimal CalculatePartialRefund(
+    decimal lineAmount,
+    int purchasedQuantity,
+    int alreadyReturned,
+    int returnQuantity)
+        {
+            if (lineAmount < 0 ||
+                purchasedQuantity <= 0 ||
+                alreadyReturned < 0 ||
+                alreadyReturned > purchasedQuantity ||
+                returnQuantity <= 0 ||
+                returnQuantity > purchasedQuantity - alreadyReturned)
+            {
+                throw new InvalidOperationException(
+                    "The return quantity or saved sale amount is invalid.");
+            }
+
+            decimal previousAmount = Math.Round(
+                lineAmount * alreadyReturned / purchasedQuantity,
+                2,
+                MidpointRounding.AwayFromZero);
+
+            decimal newAmount = Math.Round(
+                lineAmount * (alreadyReturned + returnQuantity) /
+                purchasedQuantity,
+                2,
+                MidpointRounding.AwayFromZero);
+
+            return newAmount - previousAmount;
+        }
+        public static decimal[] CalculateReturnRefund(
+    DataTable items,
+    int orderDetailsID,
+    int returnQuantity)
+        {
+            if (items.Rows.Count == 0)
+                throw new InvalidOperationException("The order has no items.");
+
+            DataRow first = items.Rows[0];
+
+            if (first.IsNull("OrderDiscountAmount") ||
+                first.IsNull("OrderTaxAmount"))
+            {
+                throw new InvalidOperationException(
+                    "This order is missing saved discount or tax amounts.");
+            }
+
+            decimal discount = Convert.ToDecimal(first["OrderDiscountAmount"]);
+            decimal savedTax = Convert.ToDecimal(first["OrderTaxAmount"]);
+            decimal subtotal = 0m;
+            decimal itemDiscountBase = 0m;
+            int discountedLines = 0;
+
+            foreach (DataRow row in items.Rows)
+            {
+                if (row.IsNull("UnitPrice"))
+                    throw new InvalidOperationException(
+                        "This order is missing an original sale price.");
+
+                decimal price = Convert.ToDecimal(row["UnitPrice"]);
+                int quantity = Convert.ToInt32(row["PurchasedQuantity"]);
+
+                if (price < 0 || quantity <= 0)
+                    throw new InvalidOperationException("Invalid saved sale details.");
+
+                decimal gross = price * quantity;
+                subtotal += gross;
+
+                if (!row.IsNull("ItemDiscountID"))
+                {
+                    itemDiscountBase += gross;
+                    discountedLines++;
+                }
+            }
+
+            decimal discountBase =
+                discountedLines > 0 ? itemDiscountBase : subtotal;
+
+            if (discount < 0 || savedTax < 0 ||
+                discount > discountBase || discountedLines > 1)
+            {
+                throw new InvalidOperationException(
+                    "The saved discount or tax information is invalid.");
+            }
+
+            decimal netTotal = subtotal - discount;
+
+            // Match the rounded overall sale total.
+            decimal roundedNet = Math.Round(
+                netTotal, 2, MidpointRounding.AwayFromZero);
+
+            decimal taxTotal = Math.Round(
+                netTotal + savedTax, 2, MidpointRounding.AwayFromZero)
+                - roundedNet;
+
+            if (netTotal == 0 && taxTotal != 0)
+                throw new InvalidOperationException("Invalid tax on a zero-value order.");
+
+            decimal cumulativeNet = 0m;
+            decimal previousNet = 0m;
+            decimal previousTax = 0m;
+            decimal[] result = null;
+
+            foreach (DataRow row in items.Select("", "OrderDetailsID ASC"))
+            {
+                decimal gross = Convert.ToDecimal(row["UnitPrice"]) *
+                    Convert.ToInt32(row["PurchasedQuantity"]);
+
+                bool receivesDiscount =
+                    discountedLines == 0 || !row.IsNull("ItemDiscountID");
+
+                decimal lineDiscount =
+                    receivesDiscount && discountBase > 0
+                        ? discount * gross / discountBase
+                        : 0m;
+
+                cumulativeNet += gross - lineDiscount;
+
+                decimal allocatedNet = Math.Round(
+                    cumulativeNet, 2, MidpointRounding.AwayFromZero);
+
+                decimal allocatedTax = netTotal == 0 ? 0m : Math.Round(
+                    taxTotal * cumulativeNet / netTotal,
+                    2, MidpointRounding.AwayFromZero);
+
+                if (Convert.ToInt32(row["OrderDetailsID"]) == orderDetailsID)
+                {
+                    int purchased = Convert.ToInt32(row["PurchasedQuantity"]);
+                    int returned = Convert.ToInt32(row["ReturnedQuantity"]);
+
+                    result = new decimal[]
+                    {
+                CalculatePartialRefund(
+                    allocatedNet - previousNet,
+                    purchased, returned, returnQuantity),
+
+                CalculatePartialRefund(
+                    allocatedTax - previousTax,
+                    purchased, returned, returnQuantity)
+                    };
+                }
+
+                previousNet = allocatedNet;
+                previousTax = allocatedTax;
+            }
+
+            if (result == null)
+                throw new InvalidOperationException("The selected order item was not found.");
+
+            return result;
+        }
+        private static DataTable GetOrderItemsForReturn(
+    int orderID,
+    SQLiteConnection conn,
+    SQLiteTransaction transaction)
+        {
+            string sql = @"
+        SELECT
+            od.OrderDetailsID,
+            od.InventoryID,
+            i.ItemName,
+            od.UnitPrice,
+            od.DiscountID AS ItemDiscountID,
+            o.DiscountAmount AS OrderDiscountAmount,
+            o.TaxAmount AS OrderTaxAmount,
+            od.Quantity AS PurchasedQuantity,
+            COALESCE(r.ReturnedQuantity, 0) AS ReturnedQuantity,
+            od.Quantity - COALESCE(r.ReturnedQuantity, 0)
+                AS RemainingQuantity
+        FROM OrderDetails od
+        INNER JOIN Orders o ON o.OrderID = od.OrderID
+        INNER JOIN Inventory i ON i.InventoryID = od.InventoryID
+        LEFT JOIN (
+            SELECT OrderDetailsID, SUM(Quantity) AS ReturnedQuantity
+            FROM Returns
+            GROUP BY OrderDetailsID
+        ) r ON r.OrderDetailsID = od.OrderDetailsID
+        WHERE od.OrderID = @OrderID
+        ORDER BY od.OrderDetailsID;";
+
+            using (SQLiteCommand cmd =
+                new SQLiteCommand(sql, conn, transaction))
+            {
+                cmd.Parameters.AddWithValue("@OrderID", orderID);
+
+                using (SQLiteDataReader reader = cmd.ExecuteReader())
+                {
+                    DataTable table = new DataTable();
+                    table.Load(reader);
+                    return table;
+                }
+            }
+        }
+        public static int ProcessReturn(
+    int orderID,
+    int orderDetailsID,
+    int quantity,
+    string reason,
+    bool restock,
+    int processedBy,
+    decimal expectedRefund)
+        {
+            if (processedBy <= 0)
+                throw new InvalidOperationException("Please log in again.");
+
+            if (string.IsNullOrWhiteSpace(reason))
+                throw new InvalidOperationException("Please enter a return reason.");
+
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                using (SQLiteCommand pragma = new SQLiteCommand(
+                    "PRAGMA foreign_keys = ON;", conn))
+                {
+                    pragma.ExecuteNonQuery();
+                }
+
+                using (SQLiteTransaction transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        DataTable items =
+                            GetOrderItemsForReturn(orderID, conn, transaction);
+
+                        DataRow item = items.AsEnumerable().FirstOrDefault(
+                            row => Convert.ToInt32(row["OrderDetailsID"]) ==
+                                orderDetailsID);
+
+                        if (item == null)
+                            throw new InvalidOperationException(
+                                "The selected item was not found in this order.");
+
+                        decimal[] refund = CalculateReturnRefund(
+                            items, orderDetailsID, quantity);
+
+                        if (refund[0] + refund[1] != expectedRefund)
+                            throw new InvalidOperationException(
+                                "The refund amount changed. Reload the order.");
+
+                        string sql = @"
+                    INSERT INTO Returns
+                    (
+                        OrderDetailsID, Quantity,
+                        RefundSubtotal, RefundTax,
+                        Restock, Reason, ReturnDate, ProcessedBy
+                    )
+                    VALUES
+                    (
+                        @DetailID, @Quantity,
+                        @Subtotal, @Tax,
+                        @Restock, @Reason, CURRENT_TIMESTAMP, @Employee
+                    );
+
+                    SELECT last_insert_rowid();";
+
+                        int returnID;
+
+                        using (SQLiteCommand cmd =
+                            new SQLiteCommand(sql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@DetailID", orderDetailsID);
+                            cmd.Parameters.AddWithValue("@Quantity", quantity);
+                            cmd.Parameters.AddWithValue("@Subtotal", refund[0]);
+                            cmd.Parameters.AddWithValue("@Tax", refund[1]);
+                            cmd.Parameters.AddWithValue("@Restock", restock ? 1 : 0);
+                            cmd.Parameters.AddWithValue("@Reason", reason.Trim());
+                            cmd.Parameters.AddWithValue("@Employee", processedBy);
+
+                            returnID = Convert.ToInt32(cmd.ExecuteScalar());
+                        }
+
+                        if (restock)
+                        {
+                            using (SQLiteCommand cmd = new SQLiteCommand(@"
+                        UPDATE Inventory
+                        SET Quantity = Quantity + @Quantity
+                        WHERE InventoryID = @InventoryID;",
+                                conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@Quantity", quantity);
+                                cmd.Parameters.AddWithValue(
+                                    "@InventoryID", item["InventoryID"]);
+
+                                if (cmd.ExecuteNonQuery() != 1)
+                                    throw new InvalidOperationException(
+                                        "Unable to restore inventory.");
+                            }
+                        }
+
+                        transaction.Commit();
+                        return returnID;
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+        public static DataTable GetReturnHistory(int orderID)
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                string sql = @"
+            SELECT
+                r.ReturnID AS [Return Number],
+                r.ReturnDate AS [Date UTC],
+                i.ItemName AS Game,
+                r.Quantity,
+                r.RefundSubtotal AS [Refund Subtotal],
+                r.RefundTax AS [Refund Tax],
+                r.RefundSubtotal + r.RefundTax AS [Total Refund],
+                CASE WHEN r.Restock = 1 THEN 'Yes' ELSE 'No'
+                    END AS Restocked,
+                r.Reason,
+                p.NameFirst || ' ' || p.NameLast AS Employee
+            FROM Returns r
+            INNER JOIN OrderDetails od
+                ON od.OrderDetailsID = r.OrderDetailsID
+            INNER JOIN Inventory i
+                ON i.InventoryID = od.InventoryID
+            LEFT JOIN Person p
+                ON p.PersonID = r.ProcessedBy
+            WHERE od.OrderID = @OrderID
+            ORDER BY r.ReturnID DESC;";
+
+                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@OrderID", orderID);
+
+                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    {
+                        DataTable table = new DataTable();
+                        table.Load(reader);
+                        return table;
+                    }
                 }
             }
         }
@@ -2293,14 +2774,16 @@ namespace BurlesonJLogonView
                                 OrderID,
                                 InventoryID,
                                 DiscountID,
-                                Quantity
+                                Quantity,
+                                UnitPrice
                             )
                             VALUES
                             (
                                 @OrderID,
                                 @InventoryID,
                                 NULL,
-                                @Quantity
+                                @Quantity,
+                                @UnitPrice
                             );";
 
                         SQLiteCommand detailCmd =
@@ -2309,7 +2792,7 @@ namespace BurlesonJLogonView
                         detailCmd.Parameters.AddWithValue("@OrderID", orderID);
                         detailCmd.Parameters.AddWithValue("@InventoryID", item.InventoryID);
                         detailCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-
+                        detailCmd.Parameters.AddWithValue("@UnitPrice", item.Price);
                         detailCmd.ExecuteNonQuery();
 
                         string inventorySql = @"
@@ -2753,12 +3236,14 @@ namespace BurlesonJLogonView
                     string sqlOrder = @"
             INSERT INTO Orders
             (
-                DiscountID,
+                   DiscountID,
                 PersonID,
                 OrderDate,
                 CC_Number,
                 ExpDate,
-                CCV
+                CCV,
+                DiscountAmount,
+                TaxAmount
             )
             VALUES
             (
@@ -2767,7 +3252,9 @@ namespace BurlesonJLogonView
                 @OrderDate,
                 @CardNumber,
                 @Expiration,
-                @CCV
+                @CCV,
+                @DiscountAmount,
+                @TaxAmount
             );
 
             SELECT last_insert_rowid();";
@@ -2798,7 +3285,8 @@ namespace BurlesonJLogonView
                     cmdOrder.Parameters.AddWithValue(
                         "@CCV",
                         ccv);
-
+                    cmdOrder.Parameters.AddWithValue("@DiscountAmount", cart.DiscountAmount);
+                    cmdOrder.Parameters.AddWithValue("@TaxAmount", cart.Tax);
                     int orderID = Convert.ToInt32(cmdOrder.ExecuteScalar());
 
                     foreach (clsCartItem item in cart.Items)
@@ -2820,14 +3308,16 @@ namespace BurlesonJLogonView
                     OrderID,
                     InventoryID,
                     DiscountID,
-                    Quantity
+                    Quantity,
+                    UnitPrice
                 )
                 VALUES
                 (
                     @OrderID,
                     @InventoryID,
                     @DiscountID,
-                    @Quantity
+                    @Quantity,
+                    @UnitPrice
                 );";
 
                         SQLiteCommand cmdDetail =
@@ -2852,7 +3342,10 @@ namespace BurlesonJLogonView
                             "@Quantity",
                             item.Quantity);
 
+                        cmdDetail.Parameters.AddWithValue("@UnitPrice", item.Price);
+
                         cmdDetail.ExecuteNonQuery();
+                        cmdDetail.Parameters.AddWithValue("@UnitPrice", item.Price);
 
                         string sqlInventory = @"
                 UPDATE Inventory
@@ -3219,28 +3712,32 @@ namespace BurlesonJLogonView
                     }
 
                     string sqlOrder = @"
-                INSERT INTO Orders
-                (
-                    DiscountID,
-                    PersonID,
-                    EmployeeID,
-                    OrderDate,
-                    CC_Number,
-                    ExpDate,
-                    CCV
-                )
-                VALUES
-                (
-                    @DiscountID,
-                    @PersonID,
-                    @EmployeeID,
-                    @OrderDate,
-                    @CardNumber,
-                    @Expiration,
-                    @CCV
-                );
+    INSERT INTO Orders
+    (
+        DiscountID,
+        PersonID,
+        EmployeeID,
+        OrderDate,
+        CC_Number,
+        ExpDate,
+        CCV,
+        DiscountAmount,
+        TaxAmount
+    )
+    VALUES
+    (
+        @DiscountID,
+        @PersonID,
+        @EmployeeID,
+        @OrderDate,
+        @CardNumber,
+        @Expiration,
+        @CCV,
+        @DiscountAmount,
+        @TaxAmount
+    );
 
-                SELECT last_insert_rowid();";
+    SELECT last_insert_rowid();";
 
                     SQLiteCommand cmdOrder =
                         new SQLiteCommand(
@@ -3275,7 +3772,11 @@ namespace BurlesonJLogonView
                     cmdOrder.Parameters.AddWithValue(
                         "@CCV",
                         ccv);
+                    cmdOrder.Parameters.AddWithValue(
+    "@DiscountAmount", cart.DiscountAmount);
 
+                    cmdOrder.Parameters.AddWithValue(
+                        "@TaxAmount", cart.Tax);
                     int orderID =
                         Convert.ToInt32(cmdOrder.ExecuteScalar());
 
@@ -3300,14 +3801,16 @@ namespace BurlesonJLogonView
                         OrderID,
                         InventoryID,
                         DiscountID,
-                        Quantity
+                        Quantity,
+                        UnitPrice
                     )
                     VALUES
                     (
                         @OrderID,
                         @InventoryID,
                         @DiscountID,
-                        @Quantity
+                        @Quantity,
+                        @UnitPrice
                     );";
 
                         SQLiteCommand cmdDetail =
@@ -3331,6 +3834,8 @@ namespace BurlesonJLogonView
                         cmdDetail.Parameters.AddWithValue(
                             "@Quantity",
                             item.Quantity);
+
+                        cmdDetail.Parameters.AddWithValue("@UnitPrice", item.Price);
 
                         cmdDetail.ExecuteNonQuery();
 

@@ -40,6 +40,7 @@
             this.btnMyAccount = new System.Windows.Forms.Button();
             this.btnHelp = new System.Windows.Forms.Button();
             this.btnLogout = new System.Windows.Forms.Button();
+            this.btnReturns = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblTitle
@@ -160,11 +161,23 @@
             this.btnLogout.UseVisualStyleBackColor = true;
             this.btnLogout.Click += new System.EventHandler(this.btnLogout_Click);
             // 
+            // btnReturns
+            // 
+            this.btnReturns.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnReturns.Location = new System.Drawing.Point(363, 469);
+            this.btnReturns.Name = "btnReturns";
+            this.btnReturns.Size = new System.Drawing.Size(170, 80);
+            this.btnReturns.TabIndex = 11;
+            this.btnReturns.Text = "Returns and Refunds";
+            this.btnReturns.UseVisualStyleBackColor = true;
+            this.btnReturns.Click += new System.EventHandler(this.btnReturns_Click);
+            // 
             // frmManagerMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(884, 561);
+            this.Controls.Add(this.btnReturns);
             this.Controls.Add(this.btnLogout);
             this.Controls.Add(this.btnHelp);
             this.Controls.Add(this.btnMyAccount);
@@ -198,5 +211,6 @@
         private System.Windows.Forms.Button btnMyAccount;
         private System.Windows.Forms.Button btnHelp;
         private System.Windows.Forms.Button btnLogout;
+        private System.Windows.Forms.Button btnReturns;
     }
 }
