@@ -148,21 +148,45 @@ namespace BurlesonJLogonView
 
             txtDescription.Text =
                 dgvInventory.CurrentRow.Cells["ItemDescription"].Value.ToString();
-            object imageData = dgvInventory.CurrentRow.Cells["ItemImage"].Value;
+            object imageData =
+     dgvInventory.CurrentRow.Cells["ItemImage"].Value;
 
-            if (imageData != DBNull.Value)
+            Image newImage = null;
+
+            if (imageData is byte[] bytes && bytes.Length > 0)
             {
-                byte[] bytes = (byte[])imageData;
-
-                using (MemoryStream ms = new MemoryStream(bytes))
+                using (MemoryStream stream = new MemoryStream(bytes))
+                using (Image source = Image.FromStream(stream))
                 {
-                    picGame.Image = Image.FromStream(ms);
+                    double scale = Math.Min(
+    1.0,
+    Math.Min(
+        (double)picGame.ClientSize.Width / source.Width,
+        (double)picGame.ClientSize.Height / source.Height));
+
+                    int width = Math.Max(1, (int)Math.Round(source.Width * scale));
+                    int height = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+                    newImage = new Bitmap(width, height);
+
+                    using (Graphics graphics = Graphics.FromImage(newImage))
+                    {
+                        graphics.InterpolationMode =
+                            System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+                        graphics.DrawImage(source, 0, 0, width, height);
+                    }
+
+                    Trace.WriteLine(
+                        $"Display bitmap dimensions: {width} x {height}");
+                    Trace.WriteLine(
+    $"Product image dimensions: {source.Width} x {source.Height}");
                 }
             }
-            else
-            {
-                picGame.Image = null;
-            }
+
+            Image previousImage = picGame.Image;
+            picGame.Image = newImage;
+            previousImage?.Dispose();
         }
 
         private void txtSearch_TextChanged(object sender, EventArgs e)

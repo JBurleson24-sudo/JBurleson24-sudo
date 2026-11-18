@@ -9,6 +9,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
+
 namespace BurlesonJLogonView
 {
     public class clsDiscount
@@ -196,31 +197,24 @@ namespace BurlesonJLogonView
                         }
                     }
                 }
-                string[] orderColumns =
-{
-    "DiscountAmount",
-    "TaxAmount"
-};
+                HashSet<string> existingOrderColumns =
+                    new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                using (SQLiteCommand check = new SQLiteCommand(
+                    "PRAGMA table_info(Orders);", conn))
+                using (SQLiteDataReader reader = check.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        existingOrderColumns.Add(reader["name"].ToString());
+                    }
+                }
+
+                string[] orderColumns = { "DiscountAmount", "TaxAmount" };
 
                 foreach (string column in orderColumns)
                 {
-                    bool exists = false;
-
-                    using (SQLiteCommand check = new SQLiteCommand(
-                        "PRAGMA table_info(Orders);", conn))
-                    using (SQLiteDataReader reader = check.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            if (reader["name"].ToString() == column)
-                            {
-                                exists = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!exists)
+                    if (!existingOrderColumns.Contains(column))
                     {
                         using (SQLiteCommand addColumn = new SQLiteCommand(
                             "ALTER TABLE Orders ADD COLUMN " + column + " NUMERIC;", conn))
