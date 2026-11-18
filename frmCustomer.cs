@@ -18,8 +18,16 @@ namespace BurlesonJLogonView
         public frmCustomer()
         {
             InitializeComponent();
-            dgvInventory.DataSource = clsDatabase.GetInventory();
-            
+            Stopwatch timer = Stopwatch.StartNew();
+
+            DataTable inventory = clsDatabase.GetInventory();
+
+            timer.Stop();
+            Trace.WriteLine(
+                $"Customer inventory query: {timer.Elapsed.TotalMilliseconds:F2} ms");
+
+            dgvInventory.DataSource = inventory;
+
         }
         private clsCart cart = new clsCart();
         private void frmCustomer_Load(object sender, EventArgs e)
@@ -46,7 +54,7 @@ namespace BurlesonJLogonView
         {
             dgvInventory.Columns["InventoryID"].Visible = false;
             dgvInventory.Columns["CategoryID"].Visible = false;
-            dgvInventory.Columns["ItemImage"].Visible = false;
+            
             dgvInventory.Columns["ItemDescription"].Visible = false;
 
             dgvInventory.Columns["ItemName"].HeaderText = "Game";
@@ -148,8 +156,10 @@ namespace BurlesonJLogonView
 
             txtDescription.Text =
                 dgvInventory.CurrentRow.Cells["ItemDescription"].Value.ToString();
-            object imageData =
-     dgvInventory.CurrentRow.Cells["ItemImage"].Value;
+            int inventoryID = Convert.ToInt32(
+                dgvInventory.CurrentRow.Cells["InventoryID"].Value);
+
+            byte[] imageData = clsDatabase.GetInventoryImage(inventoryID);
 
             Image newImage = null;
 

@@ -2274,7 +2274,7 @@ namespace BurlesonJLogonView
             ItemDescription,
             RetailPrice,
             Quantity,
-            ItemImage,
+            
             CategoryID
             FROM Inventory
             WHERE Discontinued = 0
@@ -2288,6 +2288,22 @@ namespace BurlesonJLogonView
                 }
 
                 return dt;
+            }
+        }
+        public static byte[] GetInventoryImage(int inventoryID)
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                using (SQLiteCommand cmd = new SQLiteCommand(
+                    "SELECT ItemImage FROM Inventory WHERE InventoryID = @InventoryID;",
+                    conn))
+                {
+                    cmd.Parameters.AddWithValue("@InventoryID", inventoryID);
+
+                    return cmd.ExecuteScalar() as byte[];
+                }
             }
         }
         public static DataTable GetManagerInventory()
@@ -2371,7 +2387,7 @@ namespace BurlesonJLogonView
                 ItemDescription,
                 RetailPrice,
                 Quantity,
-                ItemImage,
+                
                 CategoryID
             FROM Inventory
             WHERE
