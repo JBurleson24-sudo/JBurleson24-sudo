@@ -127,5 +127,13 @@ namespace BurlesonJLogonView
                 Close();
             }
         }
+
+        private void btnReturns_Click(object sender, EventArgs e)
+        {
+            using (frmReturns returnsForm = new frmReturns())
+            {
+                returnsForm.ShowDialog(this);
+            }
+        }
     }
 }
