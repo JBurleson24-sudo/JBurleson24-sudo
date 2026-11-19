@@ -18,8 +18,16 @@ namespace BurlesonJLogonView
         public frmCustomer()
         {
             InitializeComponent();
-            dgvInventory.DataSource = clsDatabase.GetInventory();
-            
+            Stopwatch timer = Stopwatch.StartNew();
+
+            DataTable inventory = clsDatabase.GetInventory();
+
+            timer.Stop();
+            Trace.WriteLine(
+                $"Customer inventory query: {timer.Elapsed.TotalMilliseconds:F2} ms");
+
+            dgvInventory.DataSource = inventory;
+
         }
         private clsCart cart = new clsCart();
         private void frmCustomer_Load(object sender, EventArgs e)
@@ -46,7 +54,7 @@ namespace BurlesonJLogonView
         {
             dgvInventory.Columns["InventoryID"].Visible = false;
             dgvInventory.Columns["CategoryID"].Visible = false;
-            dgvInventory.Columns["ItemImage"].Visible = false;
+            
             dgvInventory.Columns["ItemDescription"].Visible = false;
 
             dgvInventory.Columns["ItemName"].HeaderText = "Game";
@@ -148,21 +156,51 @@ namespace BurlesonJLogonView
 
             txtDescription.Text =
                 dgvInventory.CurrentRow.Cells["ItemDescription"].Value.ToString();
-            object imageData = dgvInventory.CurrentRow.Cells["ItemImage"].Value;
+            Stopwatch imageTimer = Stopwatch.StartNew();
+            int inventoryID = Convert.ToInt32(
+                dgvInventory.CurrentRow.Cells["InventoryID"].Value);
 
-            if (imageData != DBNull.Value)
+            byte[] imageData = clsDatabase.GetInventoryImage(inventoryID);
+
+            Image newImage = null;
+
+            if (imageData is byte[] bytes && bytes.Length > 0)
             {
-                byte[] bytes = (byte[])imageData;
-
-                using (MemoryStream ms = new MemoryStream(bytes))
+                using (MemoryStream stream = new MemoryStream(bytes))
+                using (Image source = Image.FromStream(stream))
                 {
-                    picGame.Image = Image.FromStream(ms);
+                    double scale = Math.Min(
+    1.0,
+    Math.Min(
+        (double)picGame.ClientSize.Width / source.Width,
+        (double)picGame.ClientSize.Height / source.Height));
+
+                    int width = Math.Max(1, (int)Math.Round(source.Width * scale));
+                    int height = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+                    newImage = new Bitmap(width, height);
+
+                    using (Graphics graphics = Graphics.FromImage(newImage))
+                    {
+                        graphics.InterpolationMode =
+                            System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+                        graphics.DrawImage(source, 0, 0, width, height);
+                    }
+
+                    Trace.WriteLine(
+                        $"Display bitmap dimensions: {width} x {height}");
+                    Trace.WriteLine(
+    $"Product image dimensions: {source.Width} x {source.Height}");
                 }
             }
-            else
-            {
-                picGame.Image = null;
-            }
+
+            Image previousImage = picGame.Image;
+            picGame.Image = newImage;
+            previousImage?.Dispose();
+            imageTimer.Stop();
+            Trace.WriteLine(
+                $"Image retrieval and display setup: {imageTimer.Elapsed.TotalMilliseconds:F2} ms");
         }
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
