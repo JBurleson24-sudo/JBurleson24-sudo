@@ -1,0 +1,106 @@
+VIDEO GAME STORE BENCHMARK RESULTS
+Jared Burleson
+Threading and Optimization
+
+TEST METHODS
+Whole application actions were timed with a phone stopwatch using a Release
+build started with Ctrl+F5. Method timings used System.Diagnostics.Stopwatch
+with a Release build started with F5 and the debugger attached.
+All method times below are milliseconds (ms). Whole action times are seconds.
+The median is the middle value after sorting three trial results.
+
+1. DATABASE STARTUP BEFORE OPTIMIZATION
+
+Operation                       Time (ms)
+InitializeDatabase                 287.45
+SeedDatabase                         1.50
+ImportInventory                      1.27
+ImportInventoryImages                1.78
+Total                              292.00
+
+This baseline contains one Release run.
+
+2. DATABASE STARTUP AFTER SCHEMA CHECK REFACTOR
+
+Operation                       Run 1      Run 2      Run 3     Median
+InitializeDatabase             105.02     101.44     100.54     101.44
+All four startup calls         108.31     104.98     104.33     104.98
+
+The change reads the Orders column list once and reuses it for both column
+checks. SQLite loading, caching, and run variation also affect startup.
+The full observed reduction cannot be attributed to this code change.
+
+3. MANAGER INVENTORY METHOD MEASUREMENTS
+
+Operation                       Time (ms)
+Database query                       1.50
+Grid binding and setup               5.07
+Inventory search                     3.20
+
+These are individual samples. Grid setup excludes later screen painting.
+The search text and category were not recorded.
+
+4. CUSTOMER INVENTORY QUERY AFTER IMAGE RETRIEVAL CHANGE
+
+Run 1 (ms)     Run 2 (ms)     Run 3 (ms)     Median (ms)
+     68.06          62.37          67.93           67.93
+
+Earlier single-run baseline with image bytes in the list query: 78.25 ms.
+The updated list query excludes image bytes. A separate query retrieves the
+selected product image afterward, outside this list query measurement.
+
+5. SELECTED PRODUCT IMAGE RETRIEVAL AND DISPLAY SETUP
+
+Original image (pixels)          Display bitmap (pixels)     Time (ms)
+176 x 286                       175 x 284                         4.17
+1920 x 1080                     175 x 98                         22.04
+351 x 569                       175 x 284                         7.47
+
+These samples include retrieval, decoding, resizing, image assignment,
+disposal of the previous image, and diagnostic output. They exclude later
+screen painting. Each row represents a different source image.
+
+6. WHOLE APPLICATION ACTIONS BEFORE OPTIMIZATION
+
+Action                          Run 1 (s)  Run 2 (s)  Run 3 (s)  Median (s)
+Startup to usable login screen      3.20       2.80       3.00        3.00
+Manager Inventory load              0.68       0.71       0.65        0.68
+Returns order lookup                0.46       0.42       0.43        0.43
+
+7. WHOLE APPLICATION ACTIONS AFTER OPTIMIZATION
+
+Action                          Run 1 (s)  Run 2 (s)  Run 3 (s)  Median (s)
+Startup to usable login screen      1.83       1.40       0.96        1.40
+Manager Inventory load              1.50       0.65       0.64        0.65
+Returns order lookup                0.25       0.17       0.19        0.19
+
+8. MEDIAN COMPARISON OF WHOLE APPLICATION ACTIONS
+
+Action                          Before (s)  After (s)  Measured reduction
+Startup to usable login screen        3.00       1.40               53.3%
+Manager Inventory load                0.68       0.65                4.4%
+Returns order lookup                  0.43       0.19               55.8%
+
+Measured reduction = (before median - after median) / before median x 100.
+Phone reaction time limits precision, especially for subsecond operations.
+Manager Inventory and Returns were not directly optimized during these
+changes. Their timing differences include test variation.
+
+9. MEMORY COMPARISON DURING PRODUCT BROWSING
+
+Task Manager metric: Commit size, reported in K.
+Procedure: Release without debugging, select the first ten games five times,
+then wait ten seconds before recording the second reading.
+
+Version                         After launch  After 50 selections  Increase
+Original image handling             42,376 K             53,436 K  11,060 K
+Resized and disposed images         23,356 K             27,804 K   4,448 K
+
+Observed memory growth was 6,612 K lower, or 59.8% lower in this single test.
+This comparison was recorded before images were changed to load on demand.
+Commit size covers the process and does not isolate image allocations.
+
+EVIDENCE TO KEEP WITH THIS FILE
+Save the original timing output, Task Manager screenshots, and HWiNFO64
+system summary in the Benchmarks folder. Place the optimization report in
+the project folder and include both the report and evidence in the final ZIP.

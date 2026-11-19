@@ -156,6 +156,7 @@ namespace BurlesonJLogonView
 
             txtDescription.Text =
                 dgvInventory.CurrentRow.Cells["ItemDescription"].Value.ToString();
+            Stopwatch imageTimer = Stopwatch.StartNew();
             int inventoryID = Convert.ToInt32(
                 dgvInventory.CurrentRow.Cells["InventoryID"].Value);
 
@@ -197,6 +198,9 @@ namespace BurlesonJLogonView
             Image previousImage = picGame.Image;
             picGame.Image = newImage;
             previousImage?.Dispose();
+            imageTimer.Stop();
+            Trace.WriteLine(
+                $"Image retrieval and display setup: {imageTimer.Elapsed.TotalMilliseconds:F2} ms");
         }
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
