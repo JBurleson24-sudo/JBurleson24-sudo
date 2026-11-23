@@ -144,7 +144,7 @@ namespace BurlesonJLogonView
         {
             dgvProducts.Columns["InventoryID"].Visible = false;
             dgvProducts.Columns["CategoryID"].Visible = false;
-            dgvProducts.Columns["ItemImage"].Visible = false;
+            
             dgvProducts.Columns["ItemDescription"].Visible = false;
 
             dgvProducts.Columns["ItemName"].HeaderText =
@@ -232,26 +232,25 @@ namespace BurlesonJLogonView
                     .Cells["ItemDescription"].Value
                     .ToString();
 
-            object imageData =
-                dgvProducts.CurrentRow
-                    .Cells["ItemImage"].Value;
+            int inventoryID = Convert.ToInt32(
+                dgvProducts.CurrentRow.Cells["InventoryID"].Value);
 
-            if (imageData != DBNull.Value)
+            byte[] bytes = clsDatabase.GetInventoryImage(inventoryID);
+
+            Image newImage = null;
+
+            if (bytes != null && bytes.Length > 0)
             {
-                byte[] bytes =
-                    (byte[])imageData;
-
-                using (MemoryStream ms =
-                    new MemoryStream(bytes))
+                using (MemoryStream stream = new MemoryStream(bytes))
+                using (Image source = Image.FromStream(stream))
                 {
-                    picProduct.Image =
-                        Image.FromStream(ms);
+                    newImage = new Bitmap(source);
                 }
             }
-            else
-            {
-                picProduct.Image = null;
-            }
+
+            Image previousImage = picProduct.Image;
+            picProduct.Image = newImage;
+            previousImage?.Dispose();
         }
 
         private void btnAddToCart_Click(object sender, EventArgs e)

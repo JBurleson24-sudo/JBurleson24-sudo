@@ -18,37 +18,111 @@ namespace BurlesonJLogonView
         public frmCustomer()
         {
             InitializeComponent();
-            Stopwatch timer = Stopwatch.StartNew();
+            //Stopwatch timer = Stopwatch.StartNew();
 
-            DataTable inventory = clsDatabase.GetInventory();
+            //DataTable inventory = clsDatabase.GetInventory();
 
-            timer.Stop();
-            Trace.WriteLine(
-                $"Customer inventory query: {timer.Elapsed.TotalMilliseconds:F2} ms");
+            //timer.Stop();
+            //Trace.WriteLine(
+            //    $"Customer inventory query: {timer.Elapsed.TotalMilliseconds:F2} ms");
 
-            dgvInventory.DataSource = inventory;
+            //dgvInventory.DataSource = inventory;
 
         }
         private clsCart cart = new clsCart();
-        private void frmCustomer_Load(object sender, EventArgs e)
+        private async void frmCustomer_Load(object sender, EventArgs e)
         {
-            FormatInventoryGrid();
-
-            if (dgvInventory.Rows.Count > 0)
+            Control[] loadingControls =
             {
-                dgvInventory.Rows[0].Selected = true;
+        dgvInventory,
+        cboCategory,
+        txtSearch,
+        btnSearch,
+        btnAddToCart,
+        btnViewCart,
+        btnLogin
+    };
+
+            foreach (Control control in loadingControls)
+            {
+                control.Enabled = false;
             }
-            DataTable dtCategories = clsDatabase.GetCategories();
 
-            DataRow row = dtCategories.NewRow();
-            row["CategoryID"] = 0;
-            row["CategoryName"] = "All Categories";
+            UseWaitCursor = true;
 
-            dtCategories.Rows.InsertAt(row, 0);
+            try
+            {
+                Trace.WriteLine(
+                    $"UI thread: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
 
-            cboCategory.DataSource = dtCategories;
-            cboCategory.DisplayMember = "CategoryName";
-            cboCategory.ValueMember = "CategoryID";
+                Stopwatch timer = Stopwatch.StartNew();
+
+                var data = await Task.Run(() =>
+                {
+                    Trace.WriteLine(
+                        $"Database worker thread: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+
+                    DataTable inventory = clsDatabase.GetInventory();
+                    DataTable categories = clsDatabase.GetCategories();
+
+                    return new
+                    {
+                        Inventory = inventory,
+                        Categories = categories
+                    };
+                });
+
+                timer.Stop();
+
+                if (IsDisposed || Disposing)
+                    return;
+
+                Trace.WriteLine(
+                    $"Background inventory and categories: {timer.Elapsed.TotalMilliseconds:F2} ms");
+
+                DataRow row = data.Categories.NewRow();
+                row["CategoryID"] = 0;
+                row["CategoryName"] = "All Categories";
+                data.Categories.Rows.InsertAt(row, 0);
+
+                cboCategory.DisplayMember = "CategoryName";
+                cboCategory.ValueMember = "CategoryID";
+                cboCategory.DataSource = data.Categories;
+
+                dgvInventory.DataSource = data.Inventory;
+                FormatInventoryGrid();
+
+                if (dgvInventory.Rows.Count > 0)
+                {
+                    dgvInventory.Rows[0].Selected = true;
+                }
+
+                foreach (Control control in loadingControls)
+                {
+                    control.Enabled = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (IsDisposed || Disposing)
+                    return;
+
+                MessageBox.Show(
+                    this,
+                    "Inventory could not be loaded.\n\n" + ex.Message,
+                    "Loading error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                Close();
+            }
+            finally
+            {
+                if (!IsDisposed && !Disposing)
+                {
+                    UseWaitCursor = false;
+                }
+            }
         }
         private void FormatInventoryGrid()
         {
