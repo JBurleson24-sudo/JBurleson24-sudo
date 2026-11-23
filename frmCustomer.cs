@@ -57,7 +57,7 @@ namespace BurlesonJLogonView
 
                 Stopwatch timer = Stopwatch.StartNew();
 
-                var data = await Task.Run(() =>
+                var loadingTask = Task.Run(() =>
                 {
                     Trace.WriteLine(
                         $"Database worker thread: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
@@ -71,7 +71,20 @@ namespace BurlesonJLogonView
                         Categories = categories
                     };
                 });
+                Stopwatch uiTimer = Stopwatch.StartNew();
 
+                BeginInvoke(new Action(() =>
+                {
+                    uiTimer.Stop();
+
+                    Trace.WriteLine(
+                        $"UI callback delay: {uiTimer.Elapsed.TotalMilliseconds:F2} ms");
+
+                    Trace.WriteLine(
+                        $"Database task still running at UI callback: {!loadingTask.IsCompleted}");
+                }));
+
+                var data = await loadingTask;
                 timer.Stop();
 
                 if (IsDisposed || Disposing)
