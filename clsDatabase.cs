@@ -32,9 +32,10 @@ namespace BurlesonJLogonView
 
     internal static class clsDatabase
     {
-        private static string connectionString =
-            @"Data Source=VideoGameStore.db;";
-
+        /// <summary>
+        /// Creates a connection to the SQLite database in the current user’s local application data folder.
+        /// </summary>
+        /// <returns>An unopened connection. The caller is responsible for disposing it.</returns>
         public static SQLiteConnection GetConnection()
         {
             string folder = System.IO.Path.Combine(
@@ -52,6 +53,9 @@ namespace BurlesonJLogonView
 
             return new SQLiteConnection(builder.ConnectionString);
         }
+        /// <summary>
+        /// Creates the local schema and adds columns needed by newer application versions.
+        /// </summary>
         public static void InitializeDatabase()
         {
             using (SQLiteConnection conn = GetConnection())
@@ -331,6 +335,13 @@ namespace BurlesonJLogonView
 
             return newAmount - previousAmount;
         }
+        /// <summary>
+        /// Calculates the refund for a quantity from one order line using the original sale amounts.
+        /// </summary>
+        /// <param name="items">The purchased items and saved totals for the order.</param>
+        /// <param name="orderDetailsID">The order line being returned.</param>
+        /// <param name="returnQuantity">The number of units being returned.</param>
+        /// <returns>The refund subtotal and refund tax, in that order.</returns>
         public static decimal[] CalculateReturnRefund(
     DataTable items,
     int orderDetailsID,
@@ -494,6 +505,17 @@ namespace BurlesonJLogonView
                 }
             }
         }
+        /// <summary>
+        /// Records a return and applies any inventory restock in the same transaction.
+        /// </summary>
+        /// <param name="orderID">The original order identifier.</param>
+        /// <param name="orderDetailsID">The order line being returned.</param>
+        /// <param name="quantity">The number of units being returned.</param>
+        /// <param name="reason">The recorded reason for the return.</param>
+        /// <param name="restock">Whether to add the returned units back to inventory.</param>
+        /// <param name="processedBy">The employee processing the return.</param>
+        /// <param name="expectedRefund">The total shown in the refund preview.</param>
+        /// <returns>The identifier of the recorded return.</returns>
         public static int ProcessReturn(
     int orderID,
     int orderDetailsID,
@@ -658,7 +680,7 @@ namespace BurlesonJLogonView
                         return;
                 }
 
-                                    string sql = @"
+                string sql = @"
                     INSERT INTO Categories
                     (CategoryID, CategoryName, CategoryDescription)
                     VALUES
@@ -693,29 +715,29 @@ namespace BurlesonJLogonView
                 }
             }
         }
-//        public static void UpdateSecurityQuestions()
-//        {
-//            using (SQLiteConnection conn = GetConnection())
-//            {
-//                conn.Open();
+        //        public static void UpdateSecurityQuestions()
+        //        {
+        //            using (SQLiteConnection conn = GetConnection())
+        //            {
+        //                conn.Open();
 
-//                string sql = @"
-//UPDATE SecurityQuestions SET QuestionPrompt = 'What is your favorite Color?' WHERE QuestionID = 105;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'Your favorite Toy''s name?' WHERE QuestionID = 106;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'Your Pet''s name?' WHERE QuestionID = 107;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'Your Home Town name?' WHERE QuestionID = 108;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'Your mother''s first name?' WHERE QuestionID = 109;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'Your favorite Football Team?' WHERE QuestionID = 110;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'What is your favorite food?' WHERE QuestionID = 111;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'Favorite place to vacation?' WHERE QuestionID = 112;
-//UPDATE SecurityQuestions SET QuestionPrompt = 'Name of your favorite book?' WHERE QuestionID = 113;";
+        //                string sql = @"
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'What is your favorite Color?' WHERE QuestionID = 105;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'Your favorite Toy''s name?' WHERE QuestionID = 106;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'Your Pet''s name?' WHERE QuestionID = 107;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'Your Home Town name?' WHERE QuestionID = 108;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'Your mother''s first name?' WHERE QuestionID = 109;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'Your favorite Football Team?' WHERE QuestionID = 110;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'What is your favorite food?' WHERE QuestionID = 111;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'Favorite place to vacation?' WHERE QuestionID = 112;
+        //UPDATE SecurityQuestions SET QuestionPrompt = 'Name of your favorite book?' WHERE QuestionID = 113;";
 
-//                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
-//                {
-//                    cmd.ExecuteNonQuery();
-//                }
-//            }
-//        }
+        //                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+        //                {
+        //                    cmd.ExecuteNonQuery();
+        //                }
+        //            }
+        //        }
         public static void ImportInventory()
         {
             using (SQLiteConnection conn = GetConnection())
@@ -1210,27 +1232,27 @@ namespace BurlesonJLogonView
                 using (SQLiteDataReader reader = cmd.ExecuteReader())
 
                     if (reader.Read())
-                {
-                    clsDiscount discount = new clsDiscount();
+                    {
+                        clsDiscount discount = new clsDiscount();
 
-                    discount.DiscountID = Convert.ToInt32(reader["DiscountID"]);
-                    discount.DiscountCode = reader["DiscountCode"].ToString();
-                    discount.DiscountLevel = Convert.ToInt32(reader["DiscountLevel"]);
-                    discount.DiscountType = Convert.ToInt32(reader["DiscountType"]);
+                        discount.DiscountID = Convert.ToInt32(reader["DiscountID"]);
+                        discount.DiscountCode = reader["DiscountCode"].ToString();
+                        discount.DiscountLevel = Convert.ToInt32(reader["DiscountLevel"]);
+                        discount.DiscountType = Convert.ToInt32(reader["DiscountType"]);
 
-                    if (reader["InventoryID"] != DBNull.Value)
-                        discount.InventoryID = Convert.ToInt32(reader["InventoryID"]);
+                        if (reader["InventoryID"] != DBNull.Value)
+                            discount.InventoryID = Convert.ToInt32(reader["InventoryID"]);
 
-                    if (reader["DiscountPercentage"] != DBNull.Value)
-                        discount.DiscountPercentage = Convert.ToDecimal(reader["DiscountPercentage"]);
+                        if (reader["DiscountPercentage"] != DBNull.Value)
+                            discount.DiscountPercentage = Convert.ToDecimal(reader["DiscountPercentage"]);
 
-                    if (reader["DiscountDollarAmount"] != DBNull.Value)
-                        discount.DiscountDollarAmount = Convert.ToDecimal(reader["DiscountDollarAmount"]);
+                        if (reader["DiscountDollarAmount"] != DBNull.Value)
+                            discount.DiscountDollarAmount = Convert.ToDecimal(reader["DiscountDollarAmount"]);
 
-                    return discount;
-                }
+                        return discount;
+                    }
 
-                
+
             }
             return null;
         }
@@ -2209,12 +2231,12 @@ namespace BurlesonJLogonView
                     }
                 }
 
-                
+
 
                 return null;
             }
         }
-        public static bool ResetPassword( string username,string answer1,string answer2,string answer3,string newPassword)
+        public static bool ResetPassword(string username, string answer1, string answer2, string answer3, string newPassword)
         {
             using (SQLiteConnection conn = GetConnection())
             {
@@ -2230,7 +2252,7 @@ namespace BurlesonJLogonView
                 SQLiteCommand cmd = new SQLiteCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@User", username);
 
-                
+
 
                 using (SQLiteDataReader dr = cmd.ExecuteReader())
                 {
@@ -2334,7 +2356,7 @@ namespace BurlesonJLogonView
                 }
             }
         }
-        public static DataTable SearchManagerInventory(string search,int categoryID)
+        public static DataTable SearchManagerInventory(string search, int categoryID)
         {
             using (SQLiteConnection conn = GetConnection())
             {
@@ -2458,7 +2480,7 @@ namespace BurlesonJLogonView
                 }
             }
         }
-        public static bool AddInventoryItem(string itemName, string itemDescription,int categoryID,decimal retailPrice,decimal cost,int quantity,int restockThreshold,byte[] itemImage)
+        public static bool AddInventoryItem(string itemName, string itemDescription, int categoryID, decimal retailPrice, decimal cost, int quantity, int restockThreshold, byte[] itemImage)
         {
             using (SQLiteConnection conn = GetConnection())
             {
@@ -3225,11 +3247,11 @@ namespace BurlesonJLogonView
                 conn.Open();
 
 
-    //            using (SQLiteCommand pragma = new SQLiteCommand(
-    //"PRAGMA busy_timeout = 5000;", conn))
-    //            {
-    //                pragma.ExecuteNonQuery();
-    //            }
+                //            using (SQLiteCommand pragma = new SQLiteCommand(
+                //"PRAGMA busy_timeout = 5000;", conn))
+                //            {
+                //                pragma.ExecuteNonQuery();
+                //            }
 
                 SQLiteTransaction transaction = conn.BeginTransaction();
 
@@ -3967,7 +3989,7 @@ namespace BurlesonJLogonView
                 return 0;
             }
         }
-        
+
     }
-    
+
 }

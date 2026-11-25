@@ -18,6 +18,10 @@ namespace BurlesonJLogonView
             txtReturnReason.TextChanged += (sender, e) => UpdateRefundPreview();
             nudReturnQuantity.ValueChanged += (sender, e) => UpdateRefundPreview();
         }
+        /// <summary>
+        /// Shows the estimated refund for the selected item and quantity.
+        /// Enables processing when a reason is entered and the user is signed in.
+        /// </summary>
         private void UpdateRefundPreview()
         {
             btnProcessReturn.Enabled = false;
@@ -34,12 +38,12 @@ namespace BurlesonJLogonView
 
             try
             {
-                int detailID =
+                int orderDetailsId =
                     Convert.ToInt32(row.Cells["OrderDetailsID"].Value);
 
                 decimal[] refund = clsDatabase.CalculateReturnRefund(
                     items,
-                    detailID,
+                    orderDetailsId,
                     Convert.ToInt32(nudReturnQuantity.Value));
 
                 lblRefundTotal.Text =
@@ -180,14 +184,14 @@ namespace BurlesonJLogonView
 
             try
             {
-                int detailID =
+                int orderDetailsId =
                     Convert.ToInt32(row.Cells["OrderDetailsID"].Value);
 
                 int quantity = Convert.ToInt32(nudReturnQuantity.Value);
                 bool restock = chkRestock.Checked;
 
                 decimal[] refund = clsDatabase.CalculateReturnRefund(
-                    items, detailID, quantity);
+                    items, orderDetailsId, quantity);
 
                 total = refund[0] + refund[1];
 
@@ -206,7 +210,7 @@ namespace BurlesonJLogonView
 
                 returnID = clsDatabase.ProcessReturn(
                     orderID,
-                    detailID,
+                    orderDetailsId,
                     quantity,
                     reason,
                     restock,
