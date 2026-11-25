@@ -15,9 +15,21 @@ namespace BurlesonJLogonView
 
         private void LoadInventory()
         {
+            Stopwatch timer = Stopwatch.StartNew();
+
             DataTable dt = clsDatabase.GetManagerInventory();
 
+            timer.Stop();
+            Trace.WriteLine(
+                $"Inventory database query: {timer.Elapsed.TotalMilliseconds:F2} ms");
+
+            timer.Restart();
+
             DisplayInventory(dt);
+
+            timer.Stop();
+            Trace.WriteLine(
+                $"Inventory grid setup: {timer.Elapsed.TotalMilliseconds:F2} ms");
         }
 
         private void DisplayInventory(DataTable dt)
@@ -98,10 +110,16 @@ namespace BurlesonJLogonView
                     Convert.ToInt32(cboCategory.SelectedValue);
             }
 
+            Stopwatch timer = Stopwatch.StartNew();
+
             DataTable dt =
                 clsDatabase.SearchManagerInventory(
                     txtSearch.Text.Trim(),
                     categoryID);
+
+            timer.Stop();
+            Trace.WriteLine(
+                $"Inventory search: {timer.Elapsed.TotalMilliseconds:F2} ms");
 
             DisplayInventory(dt);
         }

@@ -9,6 +9,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
+
 namespace BurlesonJLogonView
 {
     public class clsDiscount
@@ -196,31 +197,24 @@ namespace BurlesonJLogonView
                         }
                     }
                 }
-                string[] orderColumns =
-{
-    "DiscountAmount",
-    "TaxAmount"
-};
+                HashSet<string> existingOrderColumns =
+                    new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                using (SQLiteCommand check = new SQLiteCommand(
+                    "PRAGMA table_info(Orders);", conn))
+                using (SQLiteDataReader reader = check.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        existingOrderColumns.Add(reader["name"].ToString());
+                    }
+                }
+
+                string[] orderColumns = { "DiscountAmount", "TaxAmount" };
 
                 foreach (string column in orderColumns)
                 {
-                    bool exists = false;
-
-                    using (SQLiteCommand check = new SQLiteCommand(
-                        "PRAGMA table_info(Orders);", conn))
-                    using (SQLiteDataReader reader = check.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            if (reader["name"].ToString() == column)
-                            {
-                                exists = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!exists)
+                    if (!existingOrderColumns.Contains(column))
                     {
                         using (SQLiteCommand addColumn = new SQLiteCommand(
                             "ALTER TABLE Orders ADD COLUMN " + column + " NUMERIC;", conn))
@@ -2280,7 +2274,7 @@ namespace BurlesonJLogonView
             ItemDescription,
             RetailPrice,
             Quantity,
-            ItemImage,
+            
             CategoryID
             FROM Inventory
             WHERE Discontinued = 0
@@ -2294,6 +2288,22 @@ namespace BurlesonJLogonView
                 }
 
                 return dt;
+            }
+        }
+        public static byte[] GetInventoryImage(int inventoryID)
+        {
+            using (SQLiteConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                using (SQLiteCommand cmd = new SQLiteCommand(
+                    "SELECT ItemImage FROM Inventory WHERE InventoryID = @InventoryID;",
+                    conn))
+                {
+                    cmd.Parameters.AddWithValue("@InventoryID", inventoryID);
+
+                    return cmd.ExecuteScalar() as byte[];
+                }
             }
         }
         public static DataTable GetManagerInventory()
@@ -2377,7 +2387,7 @@ namespace BurlesonJLogonView
                 ItemDescription,
                 RetailPrice,
                 Quantity,
-                ItemImage,
+                
                 CategoryID
             FROM Inventory
             WHERE
